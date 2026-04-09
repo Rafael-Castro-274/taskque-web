@@ -16,6 +16,8 @@ import {
   Monitor,
   LogOut,
   UserCircle,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import type { User } from "../types";
 import { DevModal } from "./DevModal";
@@ -33,6 +35,7 @@ interface Props {
   onCreateDev: (data: Omit<User, "id" | "createdAt">) => void;
   onUpdateDev: (id: string, data: Partial<User>) => void;
   onDeleteDev: (id: string) => void;
+  onToggleActive: (id: string) => void;
   onLogout: () => void;
 }
 
@@ -46,6 +49,7 @@ export function Sidebar({
   onCreateDev,
   onUpdateDev,
   onDeleteDev,
+  onToggleActive,
   onLogout,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
@@ -60,7 +64,7 @@ export function Sidebar({
       <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
         <div className="sidebar-top">
           <div className="sidebar-brand">
-            {!collapsed && <h1 className="sidebar-logo">TaskQue</h1>}
+            {!collapsed && <img src="/logo.png" alt="TaskQue" className="sidebar-logo-img" />}
             <button
               className="btn-icon sidebar-toggle"
               onClick={() => setCollapsed(!collapsed)}
@@ -125,13 +129,23 @@ export function Sidebar({
               {!collapsed ? (
                 <>
                   {developers.map((dev) => (
-                    <div className="user-item" key={dev.id}>
-                      <span className="avatar-sm" style={{ backgroundColor: dev.color }}>
+                    <div className={`user-item ${!dev.active ? "user-inactive" : ""}`} key={dev.id}>
+                      <span className="avatar-sm" style={{ backgroundColor: dev.active ? dev.color : "#4b5563" }}>
                         {dev.avatar}
                       </span>
-                      <span className="user-name">{dev.name}</span>
+                      <div className="user-name-wrap">
+                        <span className="user-name">{dev.name}</span>
+                        {!dev.active && <span className="user-badge-inactive">Inativo</span>}
+                      </div>
                       {isAdmin && (
                         <div className="user-actions">
+                          <button
+                            className="btn-icon-sm"
+                            onClick={() => onToggleActive(dev.id)}
+                            title={dev.active ? "Desativar" : "Ativar"}
+                          >
+                            {dev.active ? <UserX size={13} /> : <UserCheck size={13} />}
+                          </button>
                           <button className="btn-icon-sm" onClick={() => setEditingDev(dev)}>
                             <Pencil size={13} />
                           </button>

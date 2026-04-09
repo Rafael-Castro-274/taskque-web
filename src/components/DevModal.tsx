@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Mail } from "lucide-react";
 import type { User } from "../types";
 
 const COLORS = ["#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#ef4444", "#22c55e"];
@@ -14,7 +14,6 @@ interface Props {
 export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
   const [name, setName] = useState(developer?.name || "");
   const [email, setEmail] = useState(developer?.email || "");
-  const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState(developer?.avatar || "");
   const [color, setColor] = useState(developer?.color || COLORS[0]);
   const [role, setRole] = useState(developer?.role || "member");
@@ -24,7 +23,7 @@ export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    if (isCreating && showAuth && (!email.trim() || !password.trim())) return;
+    if (isCreating && showAuth && !email.trim()) return;
 
     const data: Record<string, string> = {
       name: name.trim(),
@@ -35,7 +34,6 @@ export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
 
     if (showAuth && isCreating) {
       data.email = email.trim();
-      data.password = password;
     }
 
     onSave(data);
@@ -62,15 +60,15 @@ export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
               </div>
               <div className="form-group">
-                <label>Senha</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Senha de acesso" />
-              </div>
-              <div className="form-group">
                 <label>Papel</label>
                 <select value={role} onChange={(e) => setRole(e.target.value)}>
                   <option value="member">Membro</option>
                   <option value="admin">Administrador</option>
                 </select>
+              </div>
+              <div className="info-box">
+                <Mail size={14} />
+                <span>Uma senha temporária será gerada e enviada por email. O usuário deverá alterá-la no primeiro acesso.</span>
               </div>
             </>
           )}
@@ -95,7 +93,7 @@ export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-primary">Salvar</button>
+            <button type="submit" className="btn btn-primary">{isCreating && showAuth ? "Criar e Enviar Email" : "Salvar"}</button>
           </div>
         </form>
       </div>

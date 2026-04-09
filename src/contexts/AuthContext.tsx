@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import type { ReactNode } from "react";
 import type { User } from "../types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3333";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 interface AuthContextValue {
   user: User | null;

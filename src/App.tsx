@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "./contexts/AuthContext";
-import { useStore } from "./hooks/useStore";
+import { useStore } from "./contexts/StoreContext";
 import { useTheme } from "./hooks/useTheme";
 import { Board } from "./components/Board";
 import { ListView } from "./components/ListView";
@@ -8,6 +8,8 @@ import { TvPanel } from "./components/TvPanel";
 import { Sidebar } from "./components/Sidebar";
 import { Wifi, WifiOff } from "lucide-react";
 import { disconnectSocket } from "./socket";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 type ViewMode = "board" | "list" | "tv";
 
@@ -32,12 +34,20 @@ function App() {
     updateTask,
     moveTask,
     deleteTask,
-  } = useStore(token);
+  } = useStore();
 
   const handleLogout = () => {
     disconnectSocket();
     logout();
   };
+
+  const toggleActive = useCallback(async (id: string) => {
+    if (!token) return;
+    await fetch(`${API_URL}/api/users/${id}/toggle-active`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }, [token]);
 
   if (!user) return null;
 
@@ -55,6 +65,7 @@ function App() {
             onCreateDev={createDeveloper}
             onUpdateDev={updateDeveloper}
             onDeleteDev={deleteDeveloper}
+            onToggleActive={toggleActive}
             onLogout={handleLogout}
           />
           <div className="content tv-content">
@@ -78,6 +89,7 @@ function App() {
           onCreateDev={createDeveloper}
           onUpdateDev={updateDeveloper}
           onDeleteDev={deleteDeveloper}
+          onToggleActive={toggleActive}
           onLogout={handleLogout}
         />
         <div className="content">

@@ -31,7 +31,7 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <h1 className="login-logo">TaskQue</h1>
+          <img src="/logo.png" alt="TaskQue" className="login-logo-img" />
           <p className="login-subtitle">Entre na sua conta para continuar</p>
         </div>
 
