@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 let socket: Socket | null = null;
 

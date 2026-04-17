@@ -18,9 +18,11 @@ import {
   UserCircle,
   UserCheck,
   UserX,
+  GitBranch,
 } from "lucide-react";
-import type { User } from "../types";
+import type { User, Project } from "../types";
 import { DevModal } from "./DevModal";
+import { ProjectModal } from "./ProjectModal";
 
 type ViewMode = "board" | "list" | "tv";
 type Theme = "dark" | "light";
@@ -28,6 +30,8 @@ type Theme = "dark" | "light";
 interface Props {
   currentUser: User;
   developers: User[];
+  projects: Project[];
+  githubConfigured: boolean;
   view: ViewMode;
   theme: Theme;
   onViewChange: (view: ViewMode) => void;
@@ -36,12 +40,17 @@ interface Props {
   onUpdateDev: (id: string, data: Partial<User>) => void;
   onDeleteDev: (id: string) => void;
   onToggleActive: (id: string) => void;
+  onCreateProject: (data: { name: string; githubOwner: string; githubRepo: string; defaultBranch: string }) => void;
+  onUpdateProject: (id: string, data: { name: string; githubOwner: string; githubRepo: string; defaultBranch: string }) => void;
+  onDeleteProject: (id: string) => void;
   onLogout: () => void;
 }
 
 export function Sidebar({
   currentUser,
   developers,
+  projects,
+  githubConfigured,
   view,
   theme,
   onViewChange,
@@ -50,12 +59,18 @@ export function Sidebar({
   onUpdateDev,
   onDeleteDev,
   onToggleActive,
+  onCreateProject,
+  onUpdateProject,
+  onDeleteProject,
   onLogout,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [usersOpen, setUsersOpen] = useState(true);
+  const [projectsOpen, setProjectsOpen] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editingDev, setEditingDev] = useState<User | null>(null);
+  const [showCreateProject, setShowCreateProject] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const navigate = useNavigate();
   const isAdmin = currentUser.role === "admin";
 
@@ -196,6 +211,80 @@ export function Sidebar({
           )}
         </div>
 
+        {/* Projects section - only visible for admins when GitHub is configured */}
+        {isAdmin && githubConfigured && (
+          <div className="sidebar-section">
+            <button
+              className="sidebar-section-header"
+              onClick={() => !collapsed && setProjectsOpen(!projectsOpen)}
+              title="Projetos GitHub"
+            >
+              <div className="sidebar-section-left">
+                <GitBranch size={16} />
+                {!collapsed && (
+                  <>
+                    <span>Projetos</span>
+                    <span className="sidebar-count">{projects.length}</span>
+                  </>
+                )}
+              </div>
+              {!collapsed && (
+                <span className="sidebar-chevron">
+                  {projectsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </span>
+              )}
+            </button>
+
+            {(projectsOpen || collapsed) && (
+              <div className="sidebar-section-body">
+                {!collapsed ? (
+                  <>
+                    {projects.map((project) => (
+                      <div className="user-item" key={project.id}>
+                        <GitBranch size={14} style={{ flexShrink: 0, color: "#a78bfa" }} />
+                        <div className="user-name-wrap">
+                          <span className="user-name">{project.name}</span>
+                          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                            {project.githubOwner}/{project.githubRepo}
+                          </span>
+                        </div>
+                        <div className="user-actions">
+                          <button className="btn-icon-sm" onClick={() => setEditingProject(project)}>
+                            <Pencil size={13} />
+                          </button>
+                          <button className="btn-icon-sm" onClick={() => onDeleteProject(project.id)}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {projects.length === 0 && (
+                      <p className="empty-text">Nenhum projeto</p>
+                    )}
+                    <button
+                      className="sidebar-add-btn"
+                      onClick={() => setShowCreateProject(true)}
+                    >
+                      <Plus size={15} />
+                      <span>Novo projeto</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="sidebar-collapsed-users">
+                    <button
+                      className="btn-icon sidebar-add-icon"
+                      onClick={() => setShowCreateProject(true)}
+                      title="Novo projeto"
+                    >
+                      <GitBranch size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="sidebar-bottom">
           <div className="sidebar-user-profile" onClick={() => navigate("/profile")} title="Meu perfil">
             <span className="avatar-sm" style={{ backgroundColor: currentUser.color }}>
@@ -259,6 +348,19 @@ export function Sidebar({
           developer={editingDev}
           onSave={(data) => onUpdateDev(editingDev.id, data)}
           onClose={() => setEditingDev(null)}
+        />
+      )}
+      {showCreateProject && (
+        <ProjectModal
+          onSave={onCreateProject}
+          onClose={() => setShowCreateProject(false)}
+        />
+      )}
+      {editingProject && (
+        <ProjectModal
+          project={editingProject}
+          onSave={(data) => onUpdateProject(editingProject.id, data)}
+          onClose={() => setEditingProject(null)}
         />
       )}
     </>

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "./contexts/AuthContext";
 import { useStore } from "./contexts/StoreContext";
 import { useTheme } from "./hooks/useTheme";
@@ -6,10 +6,10 @@ import { Board } from "./components/Board";
 import { ListView } from "./components/ListView";
 import { TvPanel } from "./components/TvPanel";
 import { Sidebar } from "./components/Sidebar";
-import { Wifi, WifiOff } from "lucide-react";
-import { disconnectSocket } from "./socket";
+import { Wifi, WifiOff, Search, X } from "lucide-react";
+import { disconnectSocket, API_URL as SOCKET_API_URL } from "./socket";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+const API_URL = SOCKET_API_URL;
 
 type ViewMode = "board" | "list" | "tv";
 
@@ -21,6 +21,7 @@ const VIEW_LABELS: Record<ViewMode, string> = {
 
 function App() {
   const [view, setView] = useState<ViewMode>("board");
+  const [searchQuery, setSearchQuery] = useState("");
   const { theme, toggleTheme } = useTheme();
   const { user, token, logout } = useAuth();
   const {
@@ -34,6 +35,8 @@ function App() {
     updateTask,
     moveTask,
     deleteTask,
+    githubConfigured,
+    projects,
   } = useStore();
 
   const handleLogout = () => {
@@ -49,6 +52,42 @@ function App() {
     });
   }, [token]);
 
+  const handleCreateProject = useCallback(async (data: { name: string; githubOwner: string; githubRepo: string; defaultBranch: string }) => {
+    if (!token) return;
+    await fetch(`${API_URL}/api/projects`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }, [token]);
+
+  const handleUpdateProject = useCallback(async (id: string, data: { name: string; githubOwner: string; githubRepo: string; defaultBranch: string }) => {
+    if (!token) return;
+    await fetch(`${API_URL}/api/projects/${id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }, [token]);
+
+  const handleDeleteProject = useCallback(async (id: string) => {
+    if (!token) return;
+    await fetch(`${API_URL}/api/projects/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }, [token]);
+
+  const filteredTasks = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return tasks;
+    return tasks.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      t.description?.toLowerCase().includes(q) ||
+      t.branches?.some((b) => b.branchName.toLowerCase().includes(q))
+    );
+  }, [tasks, searchQuery]);
+
   if (!user) return null;
 
   if (view === "tv") {
@@ -58,6 +97,8 @@ function App() {
           <Sidebar
             currentUser={user}
             developers={developers}
+            projects={projects}
+            githubConfigured={githubConfigured}
             view={view}
             theme={theme}
             onViewChange={setView}
@@ -66,6 +107,9 @@ function App() {
             onUpdateDev={updateDeveloper}
             onDeleteDev={deleteDeveloper}
             onToggleActive={toggleActive}
+            onCreateProject={handleCreateProject}
+            onUpdateProject={handleUpdateProject}
+            onDeleteProject={handleDeleteProject}
             onLogout={handleLogout}
           />
           <div className="content tv-content">
@@ -82,6 +126,8 @@ function App() {
         <Sidebar
           currentUser={user}
           developers={developers}
+          projects={projects}
+          githubConfigured={githubConfigured}
           view={view}
           theme={theme}
           onViewChange={setView}
@@ -90,13 +136,31 @@ function App() {
           onUpdateDev={updateDeveloper}
           onDeleteDev={deleteDeveloper}
           onToggleActive={toggleActive}
+          onCreateProject={handleCreateProject}
+          onUpdateProject={handleUpdateProject}
+          onDeleteProject={handleDeleteProject}
           onLogout={handleLogout}
         />
         <div className="content">
           <header className="header">
             <div className="header-left">
               <h2 className="page-title">{VIEW_LABELS[view]}</h2>
-              <span className="task-count">{tasks.length} tarefas</span>
+              <span className="task-count">{filteredTasks.length} tarefas</span>
+            </div>
+            <div className="header-search">
+              <Search size={14} className="header-search-icon" />
+              <input
+                className="header-search-input"
+                type="text"
+                placeholder="Buscar por título, descrição ou branch..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button className="header-search-clear" onClick={() => setSearchQuery("")}>
+                  <X size={14} />
+                </button>
+              )}
             </div>
             <div className={`connection-status ${connected ? "online" : "offline"}`}>
               {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
@@ -106,21 +170,25 @@ function App() {
           <main className="main">
             {view === "board" ? (
               <Board
-                tasks={tasks}
+                tasks={filteredTasks}
                 developers={developers}
                 onCreateTask={createTask}
                 onUpdateTask={updateTask}
                 onMoveTask={moveTask}
                 onDeleteTask={deleteTask}
+                githubConfigured={githubConfigured}
+                projects={projects}
               />
             ) : (
               <ListView
-                tasks={tasks}
+                tasks={filteredTasks}
                 developers={developers}
                 onCreateTask={createTask}
                 onUpdateTask={updateTask}
                 onMoveTask={moveTask}
                 onDeleteTask={deleteTask}
+                githubConfigured={githubConfigured}
+                projects={projects}
               />
             )}
           </main>

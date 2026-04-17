@@ -1,21 +1,26 @@
 import { createContext, useContext, useCallback, useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
-import { getSocket, disconnectSocket } from "../socket";
+import { getSocket, disconnectSocket, API_URL } from "../socket";
 import { useAuth } from "./AuthContext";
-import type { User, Task } from "../types";
+import type { User, Task, Project, Subtask } from "../types";
 import type { Socket } from "socket.io-client";
 
 interface StoreContextValue {
   developers: User[];
   tasks: Task[];
+  projects: Project[];
   connected: boolean;
+  githubConfigured: boolean;
   createDeveloper: (data: Omit<User, "id" | "createdAt">) => void;
   updateDeveloper: (id: string, data: Partial<User>) => void;
   deleteDeveloper: (id: string) => void;
-  createTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt">) => void;
+  createTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
   updateTask: (id: string, data: Partial<Task>) => void;
   moveTask: (id: string, status: Task["status"]) => void;
   deleteTask: (id: string) => void;
+  createSubtask: (taskId: string, title: string) => void;
+  toggleSubtask: (id: string) => void;
+  deleteSubtask: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreContextValue>(null!);
@@ -28,7 +33,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
   const [developers, setDevelopers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [connected, setConnected] = useState(false);
+  const [githubConfigured, setGithubConfigured] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -39,15 +46,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Check GitHub integration status
+    fetch(`${API_URL}/api/github/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setGithubConfigured(data.configured))
+      .catch(() => setGithubConfigured(false));
+
     const socket = getSocket(token);
     socketRef.current = socket;
 
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    socket.on("init", (data: { developers: User[]; tasks: Task[] }) => {
+    socket.on("init", (data: { developers: User[]; tasks: Task[]; projects: Project[] }) => {
       setDevelopers(data.developers);
       setTasks(data.tasks);
+      setProjects(data.projects || []);
     });
 
     // User events
@@ -75,6 +91,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setTasks(allTasks);
     });
 
+    // Subtask events
+    socket.on("subtask:created", (subtask: Subtask) => {
+      setTasks((prev) => prev.map((t) =>
+        t.id === subtask.taskId ? { ...t, subtasks: [...(t.subtasks || []), subtask] } : t
+      ));
+    });
+    socket.on("subtask:toggled", (subtask: Subtask) => {
+      setTasks((prev) => prev.map((t) =>
+        t.id === subtask.taskId
+          ? { ...t, subtasks: (t.subtasks || []).map((s) => (s.id === subtask.id ? subtask : s)) }
+          : t
+      ));
+    });
+    socket.on("subtask:deleted", ({ id, taskId }: { id: string; taskId: string }) => {
+      setTasks((prev) => prev.map((t) =>
+        t.id === taskId ? { ...t, subtasks: (t.subtasks || []).filter((s) => s.id !== id) } : t
+      ));
+    });
+
+    // Project events
+    socket.on("project:created", (project: Project) => {
+      setProjects((prev) => [...prev, project]);
+    });
+    socket.on("project:updated", (project: Project) => {
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? project : p)));
+    });
+    socket.on("project:deleted", (id: string) => {
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    });
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -86,6 +132,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       socket.off("task:updated");
       socket.off("task:deleted");
       socket.off("tasks:sync");
+      socket.off("project:created");
+      socket.off("project:updated");
+      socket.off("project:deleted");
+      socket.off("subtask:created");
+      socket.off("subtask:toggled");
+      socket.off("subtask:deleted");
     };
   }, [token]);
 
@@ -105,7 +157,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     emit("user:delete", id);
   }, [emit]);
 
-  const createTask = useCallback((data: Omit<Task, "id" | "createdAt" | "updatedAt">) => {
+  const createTask = useCallback((data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => {
     emit("task:create", data);
   }, [emit]);
 
@@ -121,11 +173,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     emit("task:delete", id);
   }, [emit]);
 
+  const createSubtask = useCallback((taskId: string, title: string) => {
+    emit("subtask:create", { taskId, title });
+  }, [emit]);
+
+  const toggleSubtask = useCallback((id: string) => {
+    emit("subtask:toggle", id);
+  }, [emit]);
+
+  const deleteSubtask = useCallback((id: string) => {
+    emit("subtask:delete", id);
+  }, [emit]);
+
   return (
     <StoreContext.Provider value={{
-      developers, tasks, connected,
+      developers, tasks, projects, connected, githubConfigured,
       createDeveloper, updateDeveloper, deleteDeveloper,
       createTask, updateTask, moveTask, deleteTask,
+      createSubtask, toggleSubtask, deleteSubtask,
     }}>
       {children}
     </StoreContext.Provider>

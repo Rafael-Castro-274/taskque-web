@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
-import type { Developer, Task, TaskStatus } from "../types";
+import type { Developer, Task, TaskStatus, Project } from "../types";
 import { COLUMNS } from "../types";
 import { TaskCard } from "./TaskCard";
 import { TaskModal } from "./TaskModal";
@@ -10,13 +10,15 @@ import { TaskModal } from "./TaskModal";
 interface Props {
   tasks: Task[];
   developers: Developer[];
-  onCreateTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt">) => void;
+  onCreateTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
   onUpdateTask: (id: string, data: Partial<Task>) => void;
   onMoveTask: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
+  githubConfigured?: boolean;
+  projects?: Project[];
 }
 
-export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTask, onDeleteTask }: Props) {
+export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTask, onDeleteTask, githubConfigured, projects }: Props) {
   const [showCreate, setShowCreate] = useState<TaskStatus | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -52,11 +54,15 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
                     >
                       {columnTasks.map((task, index) => (
                         <Draggable key={task.id} draggableId={task.id} index={index}>
-                          {(provided) => (
+                          {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
+                              style={{
+                                ...provided.draggableProps.style,
+                                ...(snapshot.isDragging ? { opacity: 0.9 } : {}),
+                              }}
                             >
                               <TaskCard
                                 task={task}
@@ -81,7 +87,9 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
       {showCreate && (
         <TaskModal
           developers={developers}
+          projects={projects}
           defaultStatus={showCreate}
+          githubConfigured={githubConfigured}
           onSave={onCreateTask}
           onClose={() => setShowCreate(null)}
         />

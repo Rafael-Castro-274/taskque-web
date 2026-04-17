@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Calendar } from "lucide-react";
+import { Pencil, Trash2, Calendar, CheckSquare } from "lucide-react";
 import type { Developer, Task } from "../types";
 import { PRIORITIES } from "../types";
 
@@ -16,6 +16,9 @@ function formatDate(date: string) {
 export function TaskCard({ task, developer, onEdit, onDelete }: Props) {
   const priority = PRIORITIES.find((p) => p.key === task.priority);
   const hasDates = task.startDate || task.endDate;
+  const subtasks = task.subtasks || [];
+  const doneCount = subtasks.filter((s) => s.done).length;
+  const hasSubtasks = subtasks.length > 0;
 
   return (
     <div className="task-card">
@@ -30,6 +33,17 @@ export function TaskCard({ task, developer, onEdit, onDelete }: Props) {
       </div>
       <h4 className="task-title">{task.title}</h4>
       {task.description && <p className="task-desc">{task.description}</p>}
+      {hasSubtasks && (
+        <div className="task-card-subtasks">
+          <div className="subtask-progress-bar">
+            <div className="subtask-progress-fill" style={{ width: `${(doneCount / subtasks.length) * 100}%` }} />
+          </div>
+          <div className="task-card-subtask-info">
+            <CheckSquare size={12} />
+            <span>{doneCount}/{subtasks.length}</span>
+          </div>
+        </div>
+      )}
       <div className="task-card-footer">
         {hasDates && (
           <div className="task-dates">
