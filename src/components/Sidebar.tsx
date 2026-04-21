@@ -19,10 +19,15 @@ import {
   UserCheck,
   UserX,
   GitBranch,
+  Zap,
+  Play,
+  CheckCircle2,
 } from "lucide-react";
-import type { User, Project } from "../types";
+import type { User, Project, Sprint, Task } from "../types";
 import { DevModal } from "./DevModal";
 import { ProjectModal } from "./ProjectModal";
+import { SprintModal } from "./SprintModal";
+import { SprintCompleteModal } from "./SprintCompleteModal";
 
 type ViewMode = "board" | "list" | "tv";
 type Theme = "dark" | "light";
@@ -44,6 +49,14 @@ interface Props {
   onUpdateProject: (id: string, data: { name: string; githubOwner: string; githubRepo: string; defaultBranch: string }) => void;
   onDeleteProject: (id: string) => void;
   onLogout: () => void;
+  sprints: Sprint[];
+  tasks: Task[];
+  selectedSprintId: string | null;
+  onSelectSprint: (id: string | null) => void;
+  onCreateSprint: (data: { name: string; goal?: string; startDate: string; endDate: string }) => void;
+  onUpdateSprint: (id: string, data: Partial<Pick<Sprint, "name" | "goal" | "startDate" | "endDate" | "status">>) => void;
+  onDeleteSprint: (id: string) => void;
+  onCompleteSprint: (id: string, moves: { taskId: string; target: string | null }[]) => void;
 }
 
 export function Sidebar({
@@ -63,6 +76,14 @@ export function Sidebar({
   onUpdateProject,
   onDeleteProject,
   onLogout,
+  sprints,
+  tasks,
+  selectedSprintId,
+  onSelectSprint,
+  onCreateSprint,
+  onUpdateSprint,
+  onDeleteSprint,
+  onCompleteSprint,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [usersOpen, setUsersOpen] = useState(true);
@@ -71,8 +92,27 @@ export function Sidebar({
   const [editingDev, setEditingDev] = useState<User | null>(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [sprintsOpen, setSprintsOpen] = useState(true);
+  const [showCreateSprint, setShowCreateSprint] = useState(false);
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+  const [completingSprint, setCompletingSprint] = useState<Sprint | null>(null);
   const navigate = useNavigate();
   const isAdmin = currentUser.role === "admin";
+
+  const sprintStatusColors: Record<string, string> = {
+    planning: "#3b82f6",
+    active: "#22c55e",
+    completed: "#64748b",
+  };
+  const sprintStatusLabels: Record<string, string> = {
+    planning: "Planejamento",
+    active: "Ativa",
+    completed: "Concluída",
+  };
+  const sortedSprints = [...sprints].sort((a, b) => {
+    const order = { active: 0, planning: 1, completed: 2 };
+    return order[a.status] - order[b.status];
+  });
 
   return (
     <>
@@ -115,6 +155,107 @@ export function Sidebar({
               {!collapsed && <span>Painel TV</span>}
             </button>
           </nav>
+        </div>
+
+        {/* Sprints section */}
+        <div className="sidebar-section">
+          <button
+            className="sidebar-section-header"
+            onClick={() => !collapsed && setSprintsOpen(!sprintsOpen)}
+            title="Sprints"
+          >
+            <div className="sidebar-section-left">
+              <Zap size={16} />
+              {!collapsed && (
+                <>
+                  <span>Sprints</span>
+                  <span className="sidebar-count">{sprints.length}</span>
+                </>
+              )}
+            </div>
+            {!collapsed && (
+              <span className="sidebar-chevron">
+                {sprintsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+            )}
+          </button>
+
+          {(sprintsOpen || collapsed) && !collapsed && (
+            <div className="sidebar-section-body">
+              {sortedSprints.map((sprint) => (
+                <div
+                  key={sprint.id}
+                  className={`sprint-item ${selectedSprintId === sprint.id ? "sprint-item-selected" : ""} ${sprint.status === "active" ? "sprint-item-active" : ""}`}
+                  onClick={() => onSelectSprint(selectedSprintId === sprint.id ? null : sprint.id)}
+                >
+                  <div className="sprint-item-header">
+                    <span className="sprint-dot" style={{ backgroundColor: sprintStatusColors[sprint.status] }} />
+                    <span className="sprint-item-name">{sprint.name}</span>
+                    {isAdmin && (
+                      <div className="user-actions">
+                      {sprint.status === "planning" && (
+                        <button
+                          className="btn-icon-sm"
+                          onClick={(e) => { e.stopPropagation(); onUpdateSprint(sprint.id, { status: "active" }); }}
+                          title="Ativar sprint"
+                        >
+                          <Play size={13} />
+                        </button>
+                      )}
+                      {sprint.status === "active" && (
+                        <button
+                          className="btn-icon-sm"
+                          onClick={(e) => { e.stopPropagation(); setCompletingSprint(sprint); }}
+                          title="Completar sprint"
+                        >
+                          <CheckCircle2 size={13} />
+                        </button>
+                      )}
+                      {sprint.status !== "completed" && (
+                        <button
+                          className="btn-icon-sm"
+                          onClick={(e) => { e.stopPropagation(); setEditingSprint(sprint); }}
+                          title="Editar"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      <button
+                        className="btn-icon-sm"
+                        onClick={(e) => { e.stopPropagation(); onDeleteSprint(sprint.id); }}
+                        title="Excluir"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    )}
+                  </div>
+                  <div className="sprint-item-footer">
+                    <span className="sprint-item-dates">
+                      {new Date(sprint.startDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                      {" → "}
+                      {new Date(sprint.endDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                    </span>
+                    <span className="sprint-badge" style={{ backgroundColor: sprintStatusColors[sprint.status] }}>
+                      {sprintStatusLabels[sprint.status]}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {sprints.length === 0 && (
+                <p className="empty-text">Nenhuma sprint</p>
+              )}
+              {isAdmin && (
+                <button
+                  className="sidebar-add-btn"
+                  onClick={() => setShowCreateSprint(true)}
+                >
+                  <Plus size={15} />
+                  <span>Nova sprint</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="sidebar-section">
@@ -361,6 +502,28 @@ export function Sidebar({
           project={editingProject}
           onSave={(data) => onUpdateProject(editingProject.id, data)}
           onClose={() => setEditingProject(null)}
+        />
+      )}
+      {showCreateSprint && (
+        <SprintModal
+          onSave={onCreateSprint}
+          onClose={() => setShowCreateSprint(false)}
+        />
+      )}
+      {editingSprint && (
+        <SprintModal
+          sprint={editingSprint}
+          onSave={(data) => onUpdateSprint(editingSprint.id, data)}
+          onClose={() => setEditingSprint(null)}
+        />
+      )}
+      {completingSprint && (
+        <SprintCompleteModal
+          sprint={completingSprint}
+          tasks={tasks}
+          planningSprints={sprints.filter((s) => s.status === "planning")}
+          onComplete={(moves) => onCompleteSprint(completingSprint.id, moves)}
+          onClose={() => setCompletingSprint(null)}
         />
       )}
     </>

@@ -6,7 +6,7 @@ import { Board } from "./components/Board";
 import { ListView } from "./components/ListView";
 import { TvPanel } from "./components/TvPanel";
 import { Sidebar } from "./components/Sidebar";
-import { Wifi, WifiOff, Search, X } from "lucide-react";
+import { Wifi, WifiOff, Search, X, Zap } from "lucide-react";
 import { disconnectSocket, API_URL as SOCKET_API_URL } from "./socket";
 
 const API_URL = SOCKET_API_URL;
@@ -37,6 +37,13 @@ function App() {
     deleteTask,
     githubConfigured,
     projects,
+    sprints,
+    selectedSprintId,
+    setSelectedSprintId,
+    createSprint,
+    updateSprint,
+    deleteSprint,
+    completeSprint,
   } = useStore();
 
   const handleLogout = () => {
@@ -78,15 +85,27 @@ function App() {
     });
   }, [token]);
 
+  const sprintFilteredTasks = useMemo(() => {
+    if (!selectedSprintId) return tasks;
+    if (selectedSprintId === "backlog") return tasks.filter((t) => !t.sprintId);
+    return tasks.filter((t) => t.sprintId === selectedSprintId);
+  }, [tasks, selectedSprintId]);
+
   const filteredTasks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return tasks;
-    return tasks.filter((t) =>
+    if (!q) return sprintFilteredTasks;
+    return sprintFilteredTasks.filter((t) =>
       t.title.toLowerCase().includes(q) ||
       t.description?.toLowerCase().includes(q) ||
       t.branches?.some((b) => b.branchName.toLowerCase().includes(q))
     );
-  }, [tasks, searchQuery]);
+  }, [sprintFilteredTasks, searchQuery]);
+
+  const activeSprint = useMemo(() => sprints.find((s) => s.status === "active"), [sprints]);
+  const sortedSprints = useMemo(() => {
+    const order = { active: 0, planning: 1, completed: 2 };
+    return [...sprints].sort((a, b) => order[a.status] - order[b.status]);
+  }, [sprints]);
 
   if (!user) return null;
 
@@ -111,6 +130,14 @@ function App() {
             onUpdateProject={handleUpdateProject}
             onDeleteProject={handleDeleteProject}
             onLogout={handleLogout}
+            sprints={sprints}
+            tasks={tasks}
+            selectedSprintId={selectedSprintId}
+            onSelectSprint={setSelectedSprintId}
+            onCreateSprint={createSprint}
+            onUpdateSprint={updateSprint}
+            onDeleteSprint={deleteSprint}
+            onCompleteSprint={completeSprint}
           />
           <div className="content tv-content">
             <TvPanel tasks={tasks} developers={developers} />
@@ -140,12 +167,36 @@ function App() {
           onUpdateProject={handleUpdateProject}
           onDeleteProject={handleDeleteProject}
           onLogout={handleLogout}
+          sprints={sprints}
+          tasks={tasks}
+          selectedSprintId={selectedSprintId}
+          onSelectSprint={setSelectedSprintId}
+          onCreateSprint={createSprint}
+          onUpdateSprint={updateSprint}
+          onDeleteSprint={deleteSprint}
+          onCompleteSprint={completeSprint}
         />
         <div className="content">
           <header className="header">
             <div className="header-left">
               <h2 className="page-title">{VIEW_LABELS[view]}</h2>
               <span className="task-count">{filteredTasks.length} tarefas</span>
+            </div>
+            <div className="sprint-selector">
+              <Zap size={14} className="sprint-selector-icon" />
+              <select
+                value={selectedSprintId || ""}
+                onChange={(e) => setSelectedSprintId(e.target.value || null)}
+              >
+                <option value="">Todas as tarefas</option>
+                <option value="backlog">Backlog (sem sprint)</option>
+                {sortedSprints.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.status === "active" ? "● " : ""}{s.name}
+                    {s.status === "completed" ? " (concluída)" : ""}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="header-search">
               <Search size={14} className="header-search-icon" />
@@ -178,6 +229,8 @@ function App() {
                 onDeleteTask={deleteTask}
                 githubConfigured={githubConfigured}
                 projects={projects}
+                sprints={sprints}
+                selectedSprintId={selectedSprintId}
               />
             ) : (
               <ListView
@@ -189,6 +242,8 @@ function App() {
                 onDeleteTask={deleteTask}
                 githubConfigured={githubConfigured}
                 projects={projects}
+                sprints={sprints}
+                selectedSprintId={selectedSprintId}
               />
             )}
           </main>

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Pencil, Trash2, Plus, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult, DraggableProvided, DraggableStateSnapshot } from "@hello-pangea/dnd";
-import type { Developer, Task, TaskStatus, Project } from "../types";
+import type { Developer, Task, TaskStatus, Project, Sprint } from "../types";
 import { COLUMNS, PRIORITIES } from "../types";
 import { TaskModal } from "./TaskModal";
 
@@ -16,6 +16,8 @@ interface Props {
   onDeleteTask: (id: string) => void;
   githubConfigured?: boolean;
   projects?: Project[];
+  sprints?: Sprint[];
+  selectedSprintId?: string | null;
 }
 
 function ListRow({
@@ -93,7 +95,7 @@ function ListRow({
   return row;
 }
 
-export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMoveTask, onDeleteTask, githubConfigured, projects }: Props) {
+export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMoveTask, onDeleteTask, githubConfigured, projects, sprints, selectedSprintId }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [showCreate, setShowCreate] = useState<TaskStatus | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -201,6 +203,8 @@ export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMove
           githubConfigured={githubConfigured}
           onSave={onCreateTask}
           onClose={() => setShowCreate(null)}
+          sprints={sprints}
+          selectedSprintId={selectedSprintId}
         />
       )}
 
@@ -210,6 +214,7 @@ export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMove
           developers={developers}
           onSave={(data) => onUpdateTask(editingTask.id, data)}
           onClose={() => setEditingTask(null)}
+          sprints={sprints}
         />
       )}
     </>

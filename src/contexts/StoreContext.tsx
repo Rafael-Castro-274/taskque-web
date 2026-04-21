@@ -2,13 +2,16 @@ import { createContext, useContext, useCallback, useEffect, useState, useRef } f
 import type { ReactNode } from "react";
 import { getSocket, disconnectSocket, API_URL } from "../socket";
 import { useAuth } from "./AuthContext";
-import type { User, Task, Project, Subtask } from "../types";
+import type { User, Task, Project, Subtask, Sprint, SprintStatus } from "../types";
 import type { Socket } from "socket.io-client";
 
 interface StoreContextValue {
   developers: User[];
   tasks: Task[];
   projects: Project[];
+  sprints: Sprint[];
+  selectedSprintId: string | null;
+  setSelectedSprintId: (id: string | null) => void;
   connected: boolean;
   githubConfigured: boolean;
   createDeveloper: (data: Omit<User, "id" | "createdAt">) => void;
@@ -21,6 +24,10 @@ interface StoreContextValue {
   createSubtask: (taskId: string, title: string) => void;
   toggleSubtask: (id: string) => void;
   deleteSubtask: (id: string) => void;
+  createSprint: (data: { name: string; goal?: string; startDate: string; endDate: string }) => void;
+  updateSprint: (id: string, data: Partial<Pick<Sprint, "name" | "goal" | "startDate" | "endDate" | "status">>) => void;
+  deleteSprint: (id: string) => void;
+  completeSprint: (id: string, moves: { taskId: string; target: string | null }[]) => void;
 }
 
 const StoreContext = createContext<StoreContextValue>(null!);
@@ -34,9 +41,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [developers, setDevelopers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [selectedSprintId, setSelectedSprintIdState] = useState<string | null>(
+    () => localStorage.getItem("taskque:selectedSprintId")
+  );
   const [connected, setConnected] = useState(false);
   const [githubConfigured, setGithubConfigured] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+
+  const setSelectedSprintId = useCallback((id: string | null) => {
+    setSelectedSprintIdState(id);
+    if (id) localStorage.setItem("taskque:selectedSprintId", id);
+    else localStorage.removeItem("taskque:selectedSprintId");
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -60,10 +77,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    socket.on("init", (data: { developers: User[]; tasks: Task[]; projects: Project[] }) => {
+    socket.on("init", (data: { developers: User[]; tasks: Task[]; projects: Project[]; sprints: Sprint[] }) => {
       setDevelopers(data.developers);
       setTasks(data.tasks);
       setProjects(data.projects || []);
+      const sprintsData = data.sprints || [];
+      setSprints(sprintsData);
+      // Auto-select active sprint if none selected
+      const stored = localStorage.getItem("taskque:selectedSprintId");
+      if (!stored || !sprintsData.find((s) => s.id === stored)) {
+        const active = sprintsData.find((s) => s.status === "active");
+        if (active) {
+          setSelectedSprintIdState(active.id);
+          localStorage.setItem("taskque:selectedSprintId", active.id);
+        }
+      }
     });
 
     // User events
@@ -121,6 +149,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setProjects((prev) => prev.filter((p) => p.id !== id));
     });
 
+    // Sprint events
+    socket.on("sprint:created", (sprint: Sprint) => {
+      setSprints((prev) => [sprint, ...prev]);
+    });
+    socket.on("sprint:updated", (sprint: Sprint) => {
+      setSprints((prev) => prev.map((s) => (s.id === sprint.id ? sprint : s)));
+    });
+    socket.on("sprint:deleted", (id: string) => {
+      setSprints((prev) => prev.filter((s) => s.id !== id));
+      setSelectedSprintIdState((prev) => (prev === id ? null : prev));
+    });
+    socket.on("sprint:error", (data: { error: string }) => {
+      alert(data.error);
+    });
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -138,6 +181,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       socket.off("subtask:created");
       socket.off("subtask:toggled");
       socket.off("subtask:deleted");
+      socket.off("sprint:created");
+      socket.off("sprint:updated");
+      socket.off("sprint:deleted");
+      socket.off("sprint:error");
     };
   }, [token]);
 
@@ -185,12 +232,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     emit("subtask:delete", id);
   }, [emit]);
 
+  const createSprint = useCallback((data: { name: string; goal?: string; startDate: string; endDate: string }) => {
+    emit("sprint:create", data);
+  }, [emit]);
+
+  const updateSprint = useCallback((id: string, data: Partial<Pick<Sprint, "name" | "goal" | "startDate" | "endDate" | "status">>) => {
+    emit("sprint:update", { id, data });
+  }, [emit]);
+
+  const deleteSprint = useCallback((id: string) => {
+    emit("sprint:delete", id);
+  }, [emit]);
+
+  const completeSprint = useCallback((id: string, moves: { taskId: string; target: string | null }[]) => {
+    emit("sprint:complete", { id, moves });
+  }, [emit]);
+
   return (
     <StoreContext.Provider value={{
-      developers, tasks, projects, connected, githubConfigured,
+      developers, tasks, projects, sprints, selectedSprintId, setSelectedSprintId, connected, githubConfigured,
       createDeveloper, updateDeveloper, deleteDeveloper,
       createTask, updateTask, moveTask, deleteTask,
       createSubtask, toggleSubtask, deleteSubtask,
+      createSprint, updateSprint, deleteSprint, completeSprint,
     }}>
       {children}
     </StoreContext.Provider>

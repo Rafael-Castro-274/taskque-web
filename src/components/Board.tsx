@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
-import type { Developer, Task, TaskStatus, Project } from "../types";
+import type { Developer, Task, TaskStatus, Project, Sprint } from "../types";
 import { COLUMNS } from "../types";
 import { TaskCard } from "./TaskCard";
 import { TaskModal } from "./TaskModal";
@@ -16,9 +16,11 @@ interface Props {
   onDeleteTask: (id: string) => void;
   githubConfigured?: boolean;
   projects?: Project[];
+  sprints?: Sprint[];
+  selectedSprintId?: string | null;
 }
 
-export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTask, onDeleteTask, githubConfigured, projects }: Props) {
+export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTask, onDeleteTask, githubConfigured, projects, sprints, selectedSprintId }: Props) {
   const [showCreate, setShowCreate] = useState<TaskStatus | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -92,6 +94,8 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
           githubConfigured={githubConfigured}
           onSave={onCreateTask}
           onClose={() => setShowCreate(null)}
+          sprints={sprints}
+          selectedSprintId={selectedSprintId}
         />
       )}
 
@@ -103,6 +107,7 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
             onUpdateTask(editingTask.id, data);
           }}
           onClose={() => setEditingTask(null)}
+          sprints={sprints}
         />
       )}
     </>

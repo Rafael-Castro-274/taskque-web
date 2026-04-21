@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { X, GitBranch, Plus, Trash2, CheckSquare, Square, Pencil, Calendar, Send } from "lucide-react";
-import type { Developer, Task, TaskStatus, Project } from "../types";
+import { X, GitBranch, Plus, Trash2, CheckSquare, Square, Pencil, Calendar, Send, Zap } from "lucide-react";
+import type { Developer, Task, TaskStatus, Project, Sprint } from "../types";
 import { COLUMNS, PRIORITIES } from "../types";
 import { Comments } from "./Comments";
 import { useStore } from "../contexts/StoreContext";
@@ -13,6 +13,8 @@ interface Props {
   githubConfigured?: boolean;
   onSave: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
   onClose: () => void;
+  sprints?: Sprint[];
+  selectedSprintId?: string | null;
 }
 
 function formatDateShort(date: string) {
@@ -44,7 +46,7 @@ function InlineDropdown({ trigger, children, open, onToggle }: {
   );
 }
 
-export function TaskModal({ task, developers, projects = [], defaultStatus = "backlog", githubConfigured, onSave, onClose }: Props) {
+export function TaskModal({ task, developers, projects = [], defaultStatus = "backlog", githubConfigured, onSave, onClose, sprints = [], selectedSprintId }: Props) {
   const { createSubtask, toggleSubtask, deleteSubtask, updateTask } = useStore();
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
@@ -53,6 +55,9 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
   const [assigneeId, setAssigneeId] = useState(task?.assigneeId || "");
   const [startDate, setStartDate] = useState(task?.startDate || "");
   const [endDate, setEndDate] = useState(task?.endDate || "");
+  const [sprintId, setSprintId] = useState<string | null>(
+    task?.sprintId ?? (selectedSprintId && selectedSprintId !== "backlog" ? selectedSprintId : null)
+  );
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
@@ -101,6 +106,12 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
     if (task) handleFieldChange("assigneeId", val || null);
   };
 
+  const handleSprintChange = (val: string) => {
+    setSprintId(val || null);
+    setOpenDropdown(null);
+    if (task) handleFieldChange("sprintId", val || null);
+  };
+
   const handleTitleBlur = () => {
     setEditingTitle(false);
     if (task && title.trim() && title !== task.title) {
@@ -141,6 +152,7 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
       status,
       priority,
       assigneeId: assigneeId || null,
+      sprintId,
       startDate: startDate || null,
       endDate: endDate || null,
       ...(isNew && selectedProjectIds.length > 0 ? { branchProjectIds: selectedProjectIds } : {}),
@@ -244,6 +256,27 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
               </button>
             ))}
           </InlineDropdown>
+
+          {sprints.length > 0 && (
+            <InlineDropdown
+              open={openDropdown === "sprint"}
+              onToggle={() => setOpenDropdown(openDropdown === "sprint" ? null : "sprint")}
+              trigger={
+                sprintId
+                  ? <><Zap size={13} />{sprints.find((s) => s.id === sprintId)?.name || "Sprint"}</>
+                  : <span style={{ color: "var(--text-muted)" }}><Zap size={13} /> Sprint</span>
+              }
+            >
+              <button className={`dropdown-item ${!sprintId ? "active" : ""}`} onClick={() => handleSprintChange("")}>
+                Sem sprint (Backlog)
+              </button>
+              {sprints.filter((s) => s.status !== "completed").map((s) => (
+                <button key={s.id} className={`dropdown-item ${sprintId === s.id ? "active" : ""}`} onClick={() => handleSprintChange(s.id)}>
+                  <span className="chip-dot" style={{ background: s.status === "active" ? "#22c55e" : "#3b82f6" }} />{s.name}
+                </button>
+              ))}
+            </InlineDropdown>
+          )}
 
           <div className="inline-chip date-chip">
             <Calendar size={13} />
