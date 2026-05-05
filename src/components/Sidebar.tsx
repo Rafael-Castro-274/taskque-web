@@ -119,7 +119,7 @@ export function Sidebar({
         {/* Top: Logo + Nav */}
         <div className="space-y-1 p-3">
           <div className="flex items-center justify-between pb-2">
-            {!collapsed && <img src="/logo.png" alt="TaskQue" className="h-7 object-contain" />}
+            {!collapsed && <img src="/logo.png?v=2" alt="TaskQue" className="h-7 object-contain" />}
             <Button
               variant="ghost"
               size="icon-xs"

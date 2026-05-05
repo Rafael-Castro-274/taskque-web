@@ -49,7 +49,7 @@ export function ChangePasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-[420px] border-border/30 bg-card/80 backdrop-blur-xl glow-md">
         <CardHeader className="items-center space-y-3 pb-2">
-          <img src="/logo.png" alt="TaskQue" className="h-[100px] object-contain" />
+          <img src="/logo.png?v=2" alt="TaskQue" className="h-[100px] object-contain" />
           <p className="text-sm text-muted-foreground">
             Olá {user?.name}, defina sua nova senha para continuar
           </p>
