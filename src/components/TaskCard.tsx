@@ -25,7 +25,7 @@ export function TaskCard({ task, developer, onEdit, onDelete }: Props) {
   const hasSubtasks = subtasks.length > 0;
 
   return (
-    <Card className="group h-[200px] border-border/50 bg-card/60 transition-[border-color,box-shadow] duration-300 hover:border-primary/30 hover:glow-sm">
+    <Card className="group h-[200px] border-border/40 bg-secondary/50 transition-[border-color,box-shadow] duration-300 hover:border-primary/30 hover:glow-sm">
       <CardContent className="flex h-full flex-col gap-2 p-3">
         {/* Header */}
         <div className="flex items-center justify-between">

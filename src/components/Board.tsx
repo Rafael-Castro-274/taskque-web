@@ -43,7 +43,7 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
           {COLUMNS.map((col) => {
             const columnTasks = getColumnTasks(col.key);
             return (
-              <div className="flex w-[280px] min-w-[280px] flex-col rounded-lg border border-border/30 bg-card" key={col.key}>
+              <div className="flex w-[280px] min-w-[280px] flex-col rounded-lg border border-border/40 bg-card/70" key={col.key}>
                 <div className="flex items-center justify-between px-3 py-2.5">
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     {col.label}

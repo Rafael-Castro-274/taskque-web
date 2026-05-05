@@ -27,7 +27,7 @@ function TimeDisplay() {
   }, []);
 
   return (
-    <Card className="border-border/30 bg-card/40 backdrop-blur-sm">
+    <Card className="border-border/30 bg-card/60">
       <CardContent className="flex flex-col items-end gap-0.5 p-3">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Clock size={16} />
@@ -76,7 +76,7 @@ export function TvPanel({ tasks, developers }: Props) {
               { value: inReview.length, label: "Em revisão" },
               { value: doneTasks.length, label: "Concluídas" },
             ].map((stat) => (
-              <Card key={stat.label} className="border-border/30 bg-card/40 backdrop-blur-sm">
+              <Card key={stat.label} className="border-border/30 bg-card/60">
                 <CardContent className="flex flex-col items-center px-5 py-2.5">
                   <span className="text-2xl font-bold text-foreground">{stat.value}</span>
                   <span className="text-[0.65rem] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
@@ -115,7 +115,7 @@ export function TvPanel({ tasks, developers }: Props) {
                     <Card
                       key={task.id}
                       className={cn(
-                        "border-border/30 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:glow-md",
+                        "border-border/30 bg-card/60 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:glow-md",
                         isOverdue && "border-destructive/40",
                         isUrgent && "border-warning/40"
                       )}
@@ -190,7 +190,7 @@ export function TvPanel({ tasks, developers }: Props) {
                   return (
                     <Card
                       key={task.id}
-                      className="border-border/30 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:glow-md"
+                      className="border-border/30 bg-card/60 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:glow-md"
                     >
                       <CardContent className="flex flex-col gap-3 p-4">
                         <Badge className="w-fit border-0 text-[0.6rem] font-semibold uppercase" style={{ backgroundColor: priority?.color, color: "#fff" }}>

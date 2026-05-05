@@ -174,7 +174,7 @@ function App() {
         />
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <header className="flex items-center justify-between gap-4 border-b border-border/30 bg-background/80 px-5 py-3 backdrop-blur-md">
+          <header className="flex items-center justify-between gap-4 border-b border-border/30 bg-card/50 px-5 py-3">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-semibold">{VIEW_LABELS[view]}</h2>
               <Badge variant="secondary" className="text-[0.6rem] px-1.5 py-0">

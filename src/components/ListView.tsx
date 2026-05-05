@@ -137,7 +137,7 @@ export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMove
             const isCollapsed = collapsed[col.key];
 
             return (
-              <div className="rounded-lg border border-border/30 bg-card/20 backdrop-blur-sm" key={col.key}>
+              <div className="rounded-lg border border-border/30 bg-card/50" key={col.key}>
                 <div
                   className="flex cursor-pointer items-center justify-between px-3 py-2.5 transition-colors hover:bg-secondary/10"
                   onClick={() => toggle(col.key)}
