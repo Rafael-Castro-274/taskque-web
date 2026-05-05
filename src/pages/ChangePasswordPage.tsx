@@ -46,8 +46,8 @@ export function ChangePasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-[420px] border-border/30 bg-card/80 backdrop-blur-xl glow-md">
+    <div className="grid-3d flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="relative z-10 w-full max-w-[420px] border-border/30 bg-card/80 backdrop-blur-xl glow-md">
         <CardHeader className="items-center space-y-3 pb-2">
           <img src="/logo.png?v=2" alt="TaskQue" className="h-[100px] object-contain" />
           <p className="text-sm text-muted-foreground">

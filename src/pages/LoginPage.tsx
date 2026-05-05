@@ -33,8 +33,8 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-[420px] border-border/30 bg-card/80 backdrop-blur-xl glow-md">
+    <div className="grid-3d flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="relative z-10 w-full max-w-[420px] border-border/30 bg-card/80 backdrop-blur-xl glow-md">
         <CardHeader className="items-center justify-center space-y-3 pb-2">
           <img src="/logo.png?v=2" alt="TaskQue" className="mx-auto h-[80px] w-auto object-contain" />
           <p className="text-sm text-muted-foreground text-center">Entre na sua conta para continuar</p>

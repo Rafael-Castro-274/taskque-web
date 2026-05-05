@@ -130,6 +130,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  select, select option {
+    color-scheme: dark;
+    background-color: var(--color-card);
+    color: var(--color-foreground);
+  }
 }
 
 /* ===== Glow Utilities (TRON Medium) ===== */
@@ -153,6 +159,45 @@
 
 @utility glow-text {
   text-shadow: 0 0 12px oklch(0.75 0.18 195 / 0.5);
+}
+
+/* ===== Grid 3D Background ===== */
+
+.grid-3d {
+  position: relative;
+  overflow: hidden;
+}
+
+.grid-3d::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  bottom: 0;
+  left: -50%;
+  right: -50%;
+  height: 60%;
+  top: auto;
+  transform: perspective(400px) rotateX(65deg);
+  transform-origin: center bottom;
+  background-image:
+    linear-gradient(oklch(0.75 0.18 195 / 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.75 0.18 195 / 0.25) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: grid-3d-scroll 3s linear infinite;
+  pointer-events: none;
+}
+
+.grid-3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, transparent 0%, var(--color-background) 50%, var(--color-background) 100%);
+  pointer-events: none;
+}
+
+@keyframes grid-3d-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 48px; }
 }
 
 /* ===== Scrollbar ===== */
