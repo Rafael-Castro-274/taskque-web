@@ -11,8 +11,6 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
-  Sun,
-  Moon,
   Monitor,
   LogOut,
   UserCircle,
@@ -23,6 +21,9 @@ import {
   Play,
   CheckCircle2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { User, Project, Sprint, Task } from "../types";
 import { DevModal } from "./DevModal";
 import { ProjectModal } from "./ProjectModal";
@@ -30,7 +31,6 @@ import { SprintModal } from "./SprintModal";
 import { SprintCompleteModal } from "./SprintCompleteModal";
 
 type ViewMode = "board" | "list" | "tv";
-type Theme = "dark" | "light";
 
 interface Props {
   currentUser: User;
@@ -38,9 +38,7 @@ interface Props {
   projects: Project[];
   githubConfigured: boolean;
   view: ViewMode;
-  theme: Theme;
   onViewChange: (view: ViewMode) => void;
-  onToggleTheme: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onCreateDev: (data: Omit<User, "id" | "createdAt">) => void;
   onUpdateDev: (id: string, data: Partial<User>) => void;
   onDeleteDev: (id: string) => void;
@@ -65,9 +63,7 @@ export function Sidebar({
   projects,
   githubConfigured,
   view,
-  theme,
   onViewChange,
-  onToggleTheme,
   onCreateDev,
   onUpdateDev,
   onDeleteDev,
@@ -116,141 +112,134 @@ export function Sidebar({
 
   return (
     <>
-      <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
-        <div className="sidebar-top">
-          <div className="sidebar-brand">
-            {!collapsed && <img src="/logo.png" alt="TaskQue" className="sidebar-logo-img" />}
-            <button
-              className="btn-icon sidebar-toggle"
+      <aside className={cn(
+        "flex flex-col border-r border-border/30 bg-sidebar transition-[width] duration-300",
+        collapsed ? "w-[60px]" : "w-[260px]"
+      )}>
+        {/* Top: Logo + Nav */}
+        <div className="space-y-1 p-3">
+          <div className="flex items-center justify-between pb-2">
+            {!collapsed && <img src="/logo.png" alt="TaskQue" className="h-7 object-contain" />}
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setCollapsed(!collapsed)}
               title={collapsed ? "Expandir" : "Recolher"}
+              className={cn(collapsed && "mx-auto")}
             >
               {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-            </button>
+            </Button>
           </div>
 
-          <nav className="sidebar-nav">
-            <button
-              className={`sidebar-nav-item ${view === "board" ? "active" : ""}`}
-              onClick={() => onViewChange("board")}
-              title="Board"
-            >
-              <LayoutGrid size={18} />
-              {!collapsed && <span>Board</span>}
-            </button>
-            <button
-              className={`sidebar-nav-item ${view === "list" ? "active" : ""}`}
-              onClick={() => onViewChange("list")}
-              title="Lista"
-            >
-              <List size={18} />
-              {!collapsed && <span>Lista</span>}
-            </button>
-            <button
-              className={`sidebar-nav-item ${view === "tv" ? "active" : ""}`}
-              onClick={() => onViewChange("tv")}
-              title="Painel TV"
-            >
-              <Monitor size={18} />
-              {!collapsed && <span>Painel TV</span>}
-            </button>
+          <nav className="space-y-0.5">
+            {([
+              { key: "board" as const, icon: LayoutGrid, label: "Board" },
+              { key: "list" as const, icon: List, label: "Lista" },
+              { key: "tv" as const, icon: Monitor, label: "Painel TV" },
+            ]).map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all",
+                  view === key
+                    ? "bg-primary/10 text-primary glow-sm border border-primary/20"
+                    : "text-muted-foreground hover:bg-secondary/30 hover:text-foreground border border-transparent"
+                )}
+                onClick={() => onViewChange(key)}
+                title={label}
+              >
+                <Icon size={18} />
+                {!collapsed && <span>{label}</span>}
+              </button>
+            ))}
           </nav>
         </div>
 
         {/* Sprints section */}
-        <div className="sidebar-section">
+        <div className="border-t border-border/20 px-3 py-2">
           <button
-            className="sidebar-section-header"
+            className="flex w-full items-center justify-between rounded-md px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             onClick={() => !collapsed && setSprintsOpen(!sprintsOpen)}
             title="Sprints"
           >
-            <div className="sidebar-section-left">
-              <Zap size={16} />
+            <div className="flex items-center gap-2">
+              <Zap size={14} />
               {!collapsed && (
                 <>
                   <span>Sprints</span>
-                  <span className="sidebar-count">{sprints.length}</span>
+                  <Badge variant="secondary" className="text-[0.55rem] px-1 py-0">{sprints.length}</Badge>
                 </>
               )}
             </div>
             {!collapsed && (
-              <span className="sidebar-chevron">
-                {sprintsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </span>
+              sprintsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />
             )}
           </button>
 
-          {(sprintsOpen || collapsed) && !collapsed && (
-            <div className="sidebar-section-body">
+          {sprintsOpen && !collapsed && (
+            <div className="mt-1 space-y-0.5">
               {sortedSprints.map((sprint) => (
                 <div
                   key={sprint.id}
-                  className={`sprint-item ${selectedSprintId === sprint.id ? "sprint-item-selected" : ""} ${sprint.status === "active" ? "sprint-item-active" : ""}`}
+                  className={cn(
+                    "group cursor-pointer rounded-md px-2 py-1.5 transition-all",
+                    selectedSprintId === sprint.id
+                      ? "bg-primary/10 border border-primary/20 glow-sm"
+                      : "hover:bg-secondary/20 border border-transparent",
+                    sprint.status === "active" && selectedSprintId !== sprint.id && "border-success/10"
+                  )}
                   onClick={() => onSelectSprint(selectedSprintId === sprint.id ? null : sprint.id)}
                 >
-                  <div className="sprint-item-header">
-                    <span className="sprint-dot" style={{ backgroundColor: sprintStatusColors[sprint.status] }} />
-                    <span className="sprint-item-name">{sprint.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: sprintStatusColors[sprint.status] }} />
+                    <span className="flex-1 truncate text-xs font-medium">{sprint.name}</span>
                     {isAdmin && (
-                      <div className="user-actions">
-                      {sprint.status === "planning" && (
-                        <button
-                          className="btn-icon-sm"
-                          onClick={(e) => { e.stopPropagation(); onUpdateSprint(sprint.id, { status: "active" }); }}
-                          title="Ativar sprint"
-                        >
-                          <Play size={13} />
-                        </button>
-                      )}
-                      {sprint.status === "active" && (
-                        <button
-                          className="btn-icon-sm"
-                          onClick={(e) => { e.stopPropagation(); setCompletingSprint(sprint); }}
-                          title="Completar sprint"
-                        >
-                          <CheckCircle2 size={13} />
-                        </button>
-                      )}
-                      {sprint.status !== "completed" && (
-                        <button
-                          className="btn-icon-sm"
-                          onClick={(e) => { e.stopPropagation(); setEditingSprint(sprint); }}
-                          title="Editar"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                      )}
-                      <button
-                        className="btn-icon-sm"
-                        onClick={(e) => { e.stopPropagation(); onDeleteSprint(sprint.id); }}
-                        title="Excluir"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                      <div className="flex gap-0 opacity-0 transition-opacity group-hover:opacity-100">
+                        {sprint.status === "planning" && (
+                          <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); onUpdateSprint(sprint.id, { status: "active" }); }} title="Ativar sprint">
+                            <Play size={11} />
+                          </Button>
+                        )}
+                        {sprint.status === "active" && (
+                          <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); setCompletingSprint(sprint); }} title="Completar sprint">
+                            <CheckCircle2 size={11} />
+                          </Button>
+                        )}
+                        {sprint.status !== "completed" && (
+                          <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); setEditingSprint(sprint); }} title="Editar">
+                            <Pencil size={11} />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); onDeleteSprint(sprint.id); }} title="Excluir">
+                          <Trash2 size={11} />
+                        </Button>
+                      </div>
                     )}
                   </div>
-                  <div className="sprint-item-footer">
-                    <span className="sprint-item-dates">
+                  <div className="mt-0.5 flex items-center justify-between">
+                    <span className="text-[0.6rem] text-muted-foreground">
                       {new Date(sprint.startDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                       {" → "}
                       {new Date(sprint.endDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                     </span>
-                    <span className="sprint-badge" style={{ backgroundColor: sprintStatusColors[sprint.status] }}>
+                    <Badge
+                      className="text-[0.5rem] px-1 py-0 border-0"
+                      style={{ backgroundColor: sprintStatusColors[sprint.status], color: "#fff" }}
+                    >
                       {sprintStatusLabels[sprint.status]}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               ))}
               {sprints.length === 0 && (
-                <p className="empty-text">Nenhuma sprint</p>
+                <p className="py-2 text-center text-[0.65rem] text-muted-foreground">Nenhuma sprint</p>
               )}
               {isAdmin && (
                 <button
-                  className="sidebar-add-btn"
+                  className="flex w-full items-center gap-1.5 rounded-md border border-dashed border-border/40 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
                   onClick={() => setShowCreateSprint(true)}
                 >
-                  <Plus size={15} />
+                  <Plus size={13} />
                   <span>Nova sprint</span>
                 </button>
               )}
@@ -258,79 +247,77 @@ export function Sidebar({
           )}
         </div>
 
-        <div className="sidebar-section">
+        {/* Users section */}
+        <div className="border-t border-border/20 px-3 py-2">
           <button
-            className="sidebar-section-header"
+            className="flex w-full items-center justify-between rounded-md px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             onClick={() => !collapsed && setUsersOpen(!usersOpen)}
             title="Usuários"
           >
-            <div className="sidebar-section-left">
-              <Users size={16} />
+            <div className="flex items-center gap-2">
+              <Users size={14} />
               {!collapsed && (
                 <>
                   <span>Usuários</span>
-                  <span className="sidebar-count">{developers.length}</span>
+                  <Badge variant="secondary" className="text-[0.55rem] px-1 py-0">{developers.length}</Badge>
                 </>
               )}
             </div>
             {!collapsed && (
-              <span className="sidebar-chevron">
-                {usersOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </span>
+              usersOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />
             )}
           </button>
 
           {(usersOpen || collapsed) && (
-            <div className="sidebar-section-body">
+            <div className="mt-1">
               {!collapsed ? (
-                <>
+                <div className="space-y-0.5">
                   {developers.map((dev) => (
-                    <div className={`user-item ${!dev.active ? "user-inactive" : ""}`} key={dev.id}>
-                      <span className="avatar-sm" style={{ backgroundColor: dev.active ? dev.color : "#4b5563" }}>
+                    <div className={cn("group flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-secondary/20", !dev.active && "opacity-50")} key={dev.id}>
+                      <span
+                        className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
+                        style={{ backgroundColor: dev.active ? dev.color : "#4b5563" }}
+                      >
                         {dev.avatar}
                       </span>
-                      <div className="user-name-wrap">
-                        <span className="user-name">{dev.name}</span>
-                        {!dev.active && <span className="user-badge-inactive">Inativo</span>}
+                      <div className="flex-1 min-w-0">
+                        <span className="block truncate text-xs font-medium">{dev.name}</span>
+                        {!dev.active && <span className="text-[0.55rem] font-medium uppercase text-destructive">Inativo</span>}
                       </div>
                       {isAdmin && (
-                        <div className="user-actions">
-                          <button
-                            className="btn-icon-sm"
-                            onClick={() => onToggleActive(dev.id)}
-                            title={dev.active ? "Desativar" : "Ativar"}
-                          >
-                            {dev.active ? <UserX size={13} /> : <UserCheck size={13} />}
-                          </button>
-                          <button className="btn-icon-sm" onClick={() => setEditingDev(dev)}>
-                            <Pencil size={13} />
-                          </button>
-                          <button className="btn-icon-sm" onClick={() => onDeleteDev(dev.id)}>
-                            <Trash2 size={13} />
-                          </button>
+                        <div className="flex gap-0 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Button variant="ghost" size="icon-xs" onClick={() => onToggleActive(dev.id)} title={dev.active ? "Desativar" : "Ativar"}>
+                            {dev.active ? <UserX size={11} /> : <UserCheck size={11} />}
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => setEditingDev(dev)}>
+                            <Pencil size={11} />
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => onDeleteDev(dev.id)}>
+                            <Trash2 size={11} />
+                          </Button>
                         </div>
                       )}
                     </div>
                   ))}
                   {developers.length === 0 && (
-                    <p className="empty-text">Nenhum usuário</p>
+                    <p className="py-2 text-center text-[0.65rem] text-muted-foreground">Nenhum usuário</p>
                   )}
                   {isAdmin && (
                     <button
-                      className="sidebar-add-btn"
+                      className="flex w-full items-center gap-1.5 rounded-md border border-dashed border-border/40 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
                       onClick={() => setShowCreate(true)}
                     >
-                      <Plus size={15} />
+                      <Plus size={13} />
                       <span>Novo usuário</span>
                     </button>
                   )}
-                </>
+                </div>
               ) : (
-                <div className="sidebar-collapsed-users">
+                <div className="flex flex-col items-center gap-1 py-1">
                   {developers.slice(0, 5).map((dev) => (
                     <span
                       key={dev.id}
-                      className="avatar-sm"
+                      className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
                       style={{ backgroundColor: dev.color }}
                       title={dev.name}
                     >
@@ -338,13 +325,9 @@ export function Sidebar({
                     </span>
                   ))}
                   {isAdmin && (
-                    <button
-                      className="btn-icon sidebar-add-icon"
-                      onClick={() => setShowCreate(true)}
-                      title="Novo usuário"
-                    >
-                      <Plus size={16} />
-                    </button>
+                    <Button variant="ghost" size="icon-xs" onClick={() => setShowCreate(true)} title="Novo usuário">
+                      <Plus size={14} />
+                    </Button>
                   )}
                 </div>
               )}
@@ -352,73 +335,67 @@ export function Sidebar({
           )}
         </div>
 
-        {/* Projects section - only visible for admins when GitHub is configured */}
+        {/* Projects section */}
         {isAdmin && githubConfigured && (
-          <div className="sidebar-section">
+          <div className="border-t border-border/20 px-3 py-2">
             <button
-              className="sidebar-section-header"
+              className="flex w-full items-center justify-between rounded-md px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               onClick={() => !collapsed && setProjectsOpen(!projectsOpen)}
               title="Projetos GitHub"
             >
-              <div className="sidebar-section-left">
-                <GitBranch size={16} />
+              <div className="flex items-center gap-2">
+                <GitBranch size={14} />
                 {!collapsed && (
                   <>
                     <span>Projetos</span>
-                    <span className="sidebar-count">{projects.length}</span>
+                    <Badge variant="secondary" className="text-[0.55rem] px-1 py-0">{projects.length}</Badge>
                   </>
                 )}
               </div>
               {!collapsed && (
-                <span className="sidebar-chevron">
-                  {projectsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </span>
+                projectsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />
               )}
             </button>
 
             {(projectsOpen || collapsed) && (
-              <div className="sidebar-section-body">
+              <div className="mt-1">
                 {!collapsed ? (
-                  <>
+                  <div className="space-y-0.5">
                     {projects.map((project) => (
-                      <div className="user-item" key={project.id}>
-                        <GitBranch size={14} style={{ flexShrink: 0, color: "#a78bfa" }} />
-                        <div className="user-name-wrap">
-                          <span className="user-name">{project.name}</span>
-                          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                      <div className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-secondary/20" key={project.id}>
+                        <GitBranch size={14} className="shrink-0 text-purple-400" />
+                        <div className="flex-1 min-w-0">
+                          <span className="block truncate text-xs font-medium">{project.name}</span>
+                          <span className="text-[0.55rem] text-muted-foreground">
                             {project.githubOwner}/{project.githubRepo}
                           </span>
                         </div>
-                        <div className="user-actions">
-                          <button className="btn-icon-sm" onClick={() => setEditingProject(project)}>
-                            <Pencil size={13} />
-                          </button>
-                          <button className="btn-icon-sm" onClick={() => onDeleteProject(project.id)}>
-                            <Trash2 size={13} />
-                          </button>
+                        <div className="flex gap-0 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Button variant="ghost" size="icon-xs" onClick={() => setEditingProject(project)}>
+                            <Pencil size={11} />
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => onDeleteProject(project.id)}>
+                            <Trash2 size={11} />
+                          </Button>
                         </div>
                       </div>
                     ))}
                     {projects.length === 0 && (
-                      <p className="empty-text">Nenhum projeto</p>
+                      <p className="py-2 text-center text-[0.65rem] text-muted-foreground">Nenhum projeto</p>
                     )}
                     <button
-                      className="sidebar-add-btn"
+                      className="flex w-full items-center gap-1.5 rounded-md border border-dashed border-border/40 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
                       onClick={() => setShowCreateProject(true)}
                     >
-                      <Plus size={15} />
+                      <Plus size={13} />
                       <span>Novo projeto</span>
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <div className="sidebar-collapsed-users">
-                    <button
-                      className="btn-icon sidebar-add-icon"
-                      onClick={() => setShowCreateProject(true)}
-                      title="Novo projeto"
-                    >
-                      <GitBranch size={16} />
-                    </button>
+                  <div className="flex flex-col items-center py-1">
+                    <Button variant="ghost" size="icon-xs" onClick={() => setShowCreateProject(true)} title="Novo projeto">
+                      <GitBranch size={14} />
+                    </Button>
                   </div>
                 )}
               </div>
@@ -426,63 +403,47 @@ export function Sidebar({
           </div>
         )}
 
-        <div className="sidebar-bottom">
-          <div className="sidebar-user-profile" onClick={() => navigate("/profile")} title="Meu perfil">
-            <span className="avatar-sm" style={{ backgroundColor: currentUser.color }}>
+        {/* Bottom: User Profile + Logout */}
+        <div className="mt-auto border-t border-border/20 p-3 space-y-1">
+          <div
+            className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary/20"
+            onClick={() => navigate("/profile")}
+            title="Meu perfil"
+          >
+            <span
+              className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
+              style={{ backgroundColor: currentUser.color }}
+            >
               {currentUser.avatar}
             </span>
             {!collapsed && (
-              <div className="sidebar-user-info">
-                <span className="sidebar-user-name">{currentUser.name}</span>
-                <span className="sidebar-user-role">
+              <div className="flex-1 min-w-0">
+                <span className="block truncate text-xs font-medium">{currentUser.name}</span>
+                <span className="text-[0.55rem] text-muted-foreground">
                   {currentUser.role === "admin" ? "Admin" : "Membro"}
                 </span>
               </div>
             )}
             {!collapsed && (
-              <button
-                className="btn-icon-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate("/profile");
-                }}
-                title="Perfil"
-              >
-                <UserCircle size={15} />
-              </button>
+              <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); navigate("/profile"); }} title="Perfil">
+                <UserCircle size={14} />
+              </Button>
             )}
           </div>
 
-          <div className="sidebar-bottom-actions">
-            <button
-              className="theme-toggle"
-              onClick={onToggleTheme}
-              title={theme === "dark" ? "Tema claro" : "Tema escuro"}
-            >
-              <div className="theme-toggle-track">
-                <div className={`theme-toggle-thumb ${theme}`}>
-                  {theme === "dark" ? <Moon size={12} /> : <Sun size={12} />}
-                </div>
-                <Sun size={11} className="theme-icon-light" />
-                <Moon size={11} className="theme-icon-dark" />
-              </div>
-              {!collapsed && <span>{theme === "dark" ? "Escuro" : "Claro"}</span>}
-            </button>
-
-            <button
-              className="sidebar-logout"
-              onClick={onLogout}
-              title="Sair"
-            >
-              <LogOut size={16} />
-              {!collapsed && <span>Sair</span>}
-            </button>
-          </div>
+          <button
+            className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            onClick={onLogout}
+            title="Sair"
+          >
+            <LogOut size={16} />
+            {!collapsed && <span>Sair</span>}
+          </button>
         </div>
       </aside>
 
       {showCreate && (
-        <DevModal onSave={onCreateDev} onClose={() => setShowCreate(false)} showAuth />
+        <DevModal onSave={onCreateDev as unknown as (data: Record<string, string>) => void} onClose={() => setShowCreate(false)} showAuth />
       )}
       {editingDev && (
         <DevModal

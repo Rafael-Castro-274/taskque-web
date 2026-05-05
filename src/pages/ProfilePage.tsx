@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Check } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 import { useAuth } from "../contexts/AuthContext";
 
 const COLORS = ["#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#ef4444", "#22c55e"];
@@ -55,82 +63,96 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="profile-page">
-      <div className="profile-card">
-        <div className="profile-header">
-          <button className="btn-icon" onClick={() => navigate("/")}>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-[480px] border-border/30 bg-card/80 backdrop-blur-xl glow-md">
+        <CardHeader className="flex-row items-center gap-3 pb-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ArrowLeft size={20} />
-          </button>
-          <h2>Meu Perfil</h2>
-        </div>
-
-        <div className="profile-avatar-section">
-          <span className="profile-avatar-lg" style={{ backgroundColor: color }}>
-            {avatar || name.slice(0, 2).toUpperCase()}
-          </span>
-          <div className="profile-info">
-            <h3>{user.name}</h3>
-            <span className="profile-email">{user.email}</span>
-            <span className={`profile-role ${user.role}`}>
-              {user.role === "admin" ? "Administrador" : "Membro"}
+          </Button>
+          <h2 className="text-lg font-semibold">Meu Perfil</h2>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Avatar section */}
+          <div className="flex items-center gap-4">
+            <span
+              className="inline-flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white shadow-md"
+              style={{ backgroundColor: color }}
+            >
+              {avatar || name.slice(0, 2).toUpperCase()}
             </span>
-          </div>
-        </div>
-
-        {error && <div className="login-error"><span>{error}</span></div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Nome</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>Iniciais do Avatar</label>
-            <input value={avatar} onChange={(e) => setAvatar(e.target.value)} maxLength={2} />
-          </div>
-          <div className="form-group">
-            <label>Cor</label>
-            <div className="color-picker">
-              {COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`color-swatch ${color === c ? "active" : ""}`}
-                  style={{ backgroundColor: c }}
-                  onClick={() => setColor(c)}
-                />
-              ))}
+            <div>
+              <h3 className="font-semibold">{user.name}</h3>
+              <span className="text-xs text-muted-foreground">{user.email}</span>
+              <div className="mt-1">
+                <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[0.6rem]">
+                  {user.role === "admin" ? "Administrador" : "Membro"}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          <div className="profile-divider" />
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-          <h3 className="profile-section-title">Alterar Senha</h3>
-          <div className="form-group">
-            <label>Nova Senha</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Deixe vazio para manter"
-            />
-          </div>
-          <div className="form-group">
-            <label>Confirmar Senha</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirme a nova senha"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Iniciais do Avatar</Label>
+              <Input value={avatar} onChange={(e) => setAvatar(e.target.value)} maxLength={2} />
+            </div>
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <div className="flex flex-wrap gap-2">
+                {COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={cn(
+                      "h-[30px] w-[30px] rounded-full transition-all",
+                      color === c ? "scale-110 ring-2 ring-white ring-offset-2 ring-offset-background glow-sm" : "hover:scale-105"
+                    )}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setColor(c)}
+                  />
+                ))}
+              </div>
+            </div>
 
-          <button type="submit" className="btn btn-primary login-btn" disabled={saving}>
-            {saved ? <Check size={16} /> : <Save size={16} />}
-            {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar"}
-          </button>
-        </form>
-      </div>
+            <Separator />
+
+            <h3 className="text-sm font-semibold">Alterar Senha</h3>
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Deixe vazio para manter"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Senha</Label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a nova senha"
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={saving}>
+              {saved ? <Check size={16} /> : <Save size={16} />}
+              {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

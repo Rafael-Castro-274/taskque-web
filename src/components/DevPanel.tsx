@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import type { Developer } from "../types";
 import { DevModal } from "./DevModal";
 
@@ -15,32 +17,44 @@ export function DevPanel({ developers, onCreateDev, onUpdateDev, onDeleteDev }: 
   const [editingDev, setEditingDev] = useState<Developer | null>(null);
 
   return (
-    <div className="dev-panel">
-      <div className="dev-panel-header">
-        <h3><Users size={18} /> Desenvolvedores ({developers.length})</h3>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>
-          <Plus size={16} /> Adicionar
-        </button>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Users size={18} /> Desenvolvedores
+          <Badge variant="secondary" className="text-[0.6rem] px-1.5 py-0">{developers.length}</Badge>
+        </h3>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus size={14} /> Adicionar
+        </Button>
       </div>
-      <div className="dev-list">
+      <div className="space-y-1">
         {developers.map((dev) => (
-          <div className="dev-item" key={dev.id}>
-            <span className="avatar" style={{ backgroundColor: dev.color }}>{dev.avatar}</span>
-            <span className="dev-name">{dev.name}</span>
-            <div className="dev-actions">
-              <button className="btn-icon-sm" onClick={() => setEditingDev(dev)}><Pencil size={14} /></button>
-              <button className="btn-icon-sm" onClick={() => onDeleteDev(dev.id)}><Trash2 size={14} /></button>
+          <div className="group flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary/20" key={dev.id}>
+            <span
+              className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
+              style={{ backgroundColor: dev.color }}
+            >
+              {dev.avatar}
+            </span>
+            <span className="flex-1 text-sm font-medium">{dev.name}</span>
+            <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <Button variant="ghost" size="icon-xs" onClick={() => setEditingDev(dev)}>
+                <Pencil size={14} />
+              </Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => onDeleteDev(dev.id)}>
+                <Trash2 size={14} />
+              </Button>
             </div>
           </div>
         ))}
         {developers.length === 0 && (
-          <p className="empty-text">Nenhum dev cadastrado</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">Nenhum dev cadastrado</p>
         )}
       </div>
 
       {showCreate && (
         <DevModal
-          onSave={onCreateDev}
+          onSave={onCreateDev as unknown as (data: Record<string, string>) => void}
           onClose={() => setShowCreate(false)}
         />
       )}

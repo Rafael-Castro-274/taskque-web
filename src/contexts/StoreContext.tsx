@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useState, useRef } f
 import type { ReactNode } from "react";
 import { getSocket, disconnectSocket, API_URL } from "../socket";
 import { useAuth } from "./AuthContext";
-import type { User, Task, Project, Subtask, Sprint, SprintStatus } from "../types";
+import type { User, Task, Project, Subtask, Sprint } from "../types";
 import type { Socket } from "socket.io-client";
 
 interface StoreContextValue {
@@ -17,7 +17,7 @@ interface StoreContextValue {
   createDeveloper: (data: Omit<User, "id" | "createdAt">) => void;
   updateDeveloper: (id: string, data: Partial<User>) => void;
   deleteDeveloper: (id: string) => void;
-  createTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
+  createTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[]; subtaskTitles?: string[] }) => void;
   updateTask: (id: string, data: Partial<Task>) => void;
   moveTask: (id: string, status: Task["status"]) => void;
   deleteTask: (id: string) => void;
@@ -48,6 +48,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [githubConfigured, setGithubConfigured] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+  const pendingSubtasksRef = useRef<string[]>([]);
 
   const setSelectedSprintId = useCallback((id: string | null) => {
     setSelectedSprintIdState(id);
@@ -108,6 +109,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Task events
     socket.on("task:created", (task: Task) => {
       setTasks((prev) => [...prev, task]);
+      // Create pending subtasks if any were queued during task creation
+      const titles = pendingSubtasksRef.current;
+      if (titles.length > 0) {
+        pendingSubtasksRef.current = [];
+        for (const t of titles) {
+          socket.emit("subtask:create", { taskId: task.id, title: t });
+        }
+      }
     });
     socket.on("task:updated", (task: Task) => {
       setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
@@ -204,8 +213,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     emit("user:delete", id);
   }, [emit]);
 
-  const createTask = useCallback((data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => {
-    emit("task:create", data);
+  const createTask = useCallback((data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[]; subtaskTitles?: string[] }) => {
+    const { subtaskTitles, ...taskData } = data;
+    if (subtaskTitles && subtaskTitles.length > 0) {
+      pendingSubtasksRef.current = subtaskTitles;
+    }
+    emit("task:create", taskData);
   }, [emit]);
 
   const updateTask = useCallback((id: string, data: Partial<Task>) => {

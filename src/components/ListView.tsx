@@ -3,6 +3,9 @@ import { createPortal } from "react-dom";
 import { Pencil, Trash2, Plus, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult, DraggableProvided, DraggableStateSnapshot } from "@hello-pangea/dnd";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { Developer, Task, TaskStatus, Project, Sprint } from "../types";
 import { COLUMNS, PRIORITIES } from "../types";
 import { TaskModal } from "./TaskModal";
@@ -10,7 +13,7 @@ import { TaskModal } from "./TaskModal";
 interface Props {
   tasks: Task[];
   developers: Developer[];
-  onCreateTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
+  onCreateTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[]; subtaskTitles?: string[] }) => void;
   onUpdateTask: (id: string, data: Partial<Task>) => void;
   onMoveTask: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
@@ -39,50 +42,59 @@ function ListRow({
 }) {
   const row = (
     <div
-      className={`list-row list-data-row ${snapshot.isDragging ? "list-row-dragging" : ""}`}
+      className={cn(
+        "group grid grid-cols-[32px_1fr_100px_160px_90px_90px_60px] items-center gap-1 rounded-md border border-transparent px-2 py-1.5 text-sm transition-colors hover:bg-secondary/20",
+        snapshot.isDragging && "border-primary/30 bg-card/90 shadow-lg glow-sm"
+      )}
       ref={provided.innerRef}
       {...provided.draggableProps}
     >
-      <div className="list-cell list-cell-grip" {...provided.dragHandleProps}>
+      <div className="flex items-center justify-center text-muted-foreground cursor-grab" {...provided.dragHandleProps}>
         <GripVertical size={14} />
       </div>
-      <div className="list-cell list-cell-title">
-        <div className="list-task-title">{task.title}</div>
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium">{task.title}</div>
         {task.description && (
-          <div className="list-task-desc">{task.description}</div>
+          <div className="truncate text-xs text-muted-foreground">{task.description}</div>
         )}
       </div>
-      <div className="list-cell list-cell-priority">
-        <span className="priority-badge" style={{ backgroundColor: priority?.color }}>
+      <div>
+        <Badge
+          className="text-[0.6rem] font-semibold uppercase border-0"
+          style={{ backgroundColor: priority?.color, color: "#fff" }}
+        >
           {priority?.label}
-        </span>
+        </Badge>
       </div>
-      <div className="list-cell list-cell-assignee">
+      <div>
         {dev ? (
-          <div className="list-assignee">
-            <span className="avatar-sm" style={{ backgroundColor: dev.color }}>
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full text-[0.6rem] font-bold text-white shrink-0"
+              style={{ backgroundColor: dev.color }}
+            >
               {dev.avatar}
             </span>
-            <span>{dev.name}</span>
+            <span className="truncate text-xs">{dev.name}</span>
           </div>
         ) : (
-          <span className="text-muted">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </div>
-      <div className="list-cell list-cell-date text-muted">
+      <div className="text-xs text-muted-foreground">
         {task.startDate ? new Date(task.startDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
       </div>
-      <div className="list-cell list-cell-date text-muted">
+      <div className="text-xs text-muted-foreground">
         {task.endDate ? new Date(task.endDate + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
       </div>
-      <div className="list-cell list-cell-actions">
-        <div className="list-actions" style={snapshot.isDragging ? { opacity: 0 } : undefined}>
-          <button className="btn-icon-sm" onClick={onEdit}>
+      <div>
+        <div className={cn("flex gap-0.5", snapshot.isDragging ? "opacity-0" : "opacity-0 group-hover:opacity-100 transition-opacity")}>
+          <Button variant="ghost" size="icon-xs" onClick={onEdit}>
             <Pencil size={14} />
-          </button>
-          <button className="btn-icon-sm" onClick={onDelete}>
+          </Button>
+          <Button variant="ghost" size="icon-xs" onClick={onDelete}>
             <Trash2 size={14} />
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -119,47 +131,54 @@ export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMove
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="list-view">
+        <div className="flex flex-col gap-3 p-1">
           {COLUMNS.map((col) => {
             const columnTasks = getColumnTasks(col.key);
             const isCollapsed = collapsed[col.key];
 
             return (
-              <div className="list-group" key={col.key}>
-                <div className="list-group-header" onClick={() => toggle(col.key)}>
-                  <div className="list-group-left">
-                    {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                    <h3>{col.label}</h3>
-                    <span className="count">{columnTasks.length}</span>
+              <div className="rounded-lg border border-border/30 bg-card/20 backdrop-blur-sm" key={col.key}>
+                <div
+                  className="flex cursor-pointer items-center justify-between px-3 py-2.5 transition-colors hover:bg-secondary/10"
+                  onClick={() => toggle(col.key)}
+                >
+                  <div className="flex items-center gap-2">
+                    {isCollapsed ? <ChevronRight size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+                    <h3 className="text-sm font-semibold">{col.label}</h3>
+                    <Badge variant="secondary" className="text-[0.6rem] px-1.5 py-0">{columnTasks.length}</Badge>
                   </div>
-                  <button
-                    className="btn-icon"
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowCreate(col.key);
                     }}
                   >
                     <Plus size={16} />
-                  </button>
+                  </Button>
                 </div>
 
                 {!isCollapsed && (
                   <Droppable droppableId={col.key}>
                     {(provided, snapshot) => (
                       <div
-                        className={`list-table ${snapshot.isDraggingOver ? "list-drag-over" : ""}`}
+                        className={cn(
+                          "px-1 pb-1 transition-colors",
+                          snapshot.isDraggingOver && "bg-primary/5"
+                        )}
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                       >
                         {columnTasks.length > 0 && (
-                          <div className="list-row list-header-row">
-                            <div className="list-cell list-cell-grip"></div>
-                            <div className="list-cell list-cell-title">Título</div>
-                            <div className="list-cell list-cell-priority">Prioridade</div>
-                            <div className="list-cell list-cell-assignee">Responsável</div>
-                            <div className="list-cell list-cell-date">Início</div>
-                            <div className="list-cell list-cell-date">Fim</div>
-                            <div className="list-cell list-cell-actions"></div>
+                          <div className="grid grid-cols-[32px_1fr_100px_160px_90px_90px_60px] gap-1 px-2 py-1 text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground">
+                            <div></div>
+                            <div>Título</div>
+                            <div>Prioridade</div>
+                            <div>Responsável</div>
+                            <div>Início</div>
+                            <div>Fim</div>
+                            <div></div>
                           </div>
                         )}
                         {columnTasks.map((task, index) => {
@@ -183,7 +202,7 @@ export function ListView({ tasks, developers, onCreateTask, onUpdateTask, onMove
                         })}
                         {provided.placeholder}
                         {columnTasks.length === 0 && (
-                          <p className="empty-text">Nenhuma tarefa</p>
+                          <p className="py-4 text-center text-xs text-muted-foreground">Nenhuma tarefa</p>
                         )}
                       </div>
                     )}

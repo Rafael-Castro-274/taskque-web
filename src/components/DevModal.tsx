@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { X, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { User } from "../types";
 
 const COLORS = ["#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#ef4444", "#22c55e"];
@@ -16,7 +21,7 @@ export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
   const [email, setEmail] = useState(developer?.email || "");
   const [avatar, setAvatar] = useState(developer?.avatar || "");
   const [color, setColor] = useState(developer?.color || COLORS[0]);
-  const [role, setRole] = useState(developer?.role || "member");
+  const [role, setRole] = useState<"admin" | "member">(developer?.role || "member");
 
   const isCreating = !developer;
 
@@ -41,62 +46,68 @@ export function DevModal({ developer, showAuth, onSave, onClose }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{developer ? "Editar Usuário" : "Novo Usuário"}</h2>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Nome</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do usuário" autoFocus />
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-xl">
+        <DialogHeader>
+          <DialogTitle>{developer ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do usuário" autoFocus />
           </div>
 
           {showAuth && isCreating && (
             <>
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
               </div>
-              <div className="form-group">
-                <label>Papel</label>
-                <select value={role} onChange={(e) => setRole(e.target.value)}>
+              <div className="space-y-2">
+                <Label>Papel</Label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as "admin" | "member")}
+                  className="flex h-9 w-full rounded-md border border-input bg-secondary/30 px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   <option value="member">Membro</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
-              <div className="info-box">
-                <Mail size={14} />
+              <div className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+                <Mail size={14} className="shrink-0 mt-0.5 text-primary" />
                 <span>Uma senha temporária será gerada e enviada por email. O usuário deverá alterá-la no primeiro acesso.</span>
               </div>
             </>
           )}
 
-          <div className="form-group">
-            <label>Iniciais do Avatar</label>
-            <input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="Ex: JS" maxLength={2} />
+          <div className="space-y-2">
+            <Label>Iniciais do Avatar</Label>
+            <Input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="Ex: JS" maxLength={2} />
           </div>
-          <div className="form-group">
-            <label>Cor</label>
-            <div className="color-picker">
+          <div className="space-y-2">
+            <Label>Cor</Label>
+            <div className="flex flex-wrap gap-2">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  className={`color-swatch ${color === c ? "active" : ""}`}
+                  className={cn(
+                    "h-[30px] w-[30px] rounded-full transition-all",
+                    color === c ? "scale-110 ring-2 ring-white ring-offset-2 ring-offset-background glow-sm" : "hover:scale-105"
+                  )}
                   style={{ backgroundColor: c }}
                   onClick={() => setColor(c)}
                 />
               ))}
             </div>
           </div>
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-primary">{isCreating && showAuth ? "Criar e Enviar Email" : "Salvar"}</button>
-          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit">{isCreating && showAuth ? "Criar e Enviar Email" : "Salvar"}</Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import type { Sprint } from "../types";
 
 interface Props {
@@ -29,16 +33,15 @@ export function SprintModal({ sprint, onSave, onClose }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{isEditing ? "Editar Sprint" : "Nova Sprint"}</h2>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Nome</label>
-            <input
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[440px] border-border/50 bg-card/95 backdrop-blur-xl">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Editar Sprint" : "Nova Sprint"}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Sprint 1, Sprint Jan/2026..."
@@ -46,9 +49,9 @@ export function SprintModal({ sprint, onSave, onClose }: Props) {
             />
           </div>
 
-          <div className="form-group">
-            <label>Objetivo</label>
-            <textarea
+          <div className="space-y-2">
+            <Label>Objetivo</Label>
+            <Textarea
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="Descreva o objetivo desta sprint..."
@@ -56,18 +59,18 @@ export function SprintModal({ sprint, onSave, onClose }: Props) {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Data de Início</label>
-              <input
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Data de Início</Label>
+              <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </div>
-            <div className="form-group">
-              <label>Data de Término</label>
-              <input
+            <div className="space-y-2">
+              <Label>Data de Término</Label>
+              <Input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
@@ -76,12 +79,12 @@ export function SprintModal({ sprint, onSave, onClose }: Props) {
             </div>
           </div>
 
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-primary">{isEditing ? "Salvar" : "Criar"}</button>
-          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit">{isEditing ? "Salvar" : "Criar"}</Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { X, GitBranch, Plus, Trash2, CheckSquare, Square, Pencil, Calendar, Send, Zap } from "lucide-react";
+import { GitBranch, Plus, Trash2, CheckSquare, Square, Pencil, Calendar, Zap } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import type { Developer, Task, TaskStatus, Project, Sprint } from "../types";
 import { COLUMNS, PRIORITIES } from "../types";
 import { Comments } from "./Comments";
@@ -11,14 +16,10 @@ interface Props {
   projects?: Project[];
   defaultStatus?: TaskStatus;
   githubConfigured?: boolean;
-  onSave: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
+  onSave: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[]; subtaskTitles?: string[] }) => void;
   onClose: () => void;
   sprints?: Sprint[];
   selectedSprintId?: string | null;
-}
-
-function formatDateShort(date: string) {
-  return new Date(date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
 function InlineDropdown({ trigger, children, open, onToggle }: {
@@ -39,12 +40,30 @@ function InlineDropdown({ trigger, children, open, onToggle }: {
   }, [open, onToggle]);
 
   return (
-    <div className="inline-dropdown" ref={ref}>
-      <button type="button" className="inline-chip" onClick={onToggle}>{trigger}</button>
-      {open && <div className="inline-dropdown-menu">{children}</div>}
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-secondary/30 px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-secondary/50"
+        onClick={onToggle}
+      >
+        {trigger}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-md border border-border/50 bg-card/95 p-1 shadow-lg backdrop-blur-xl animate-fade-in">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
+
+const statusColors: Record<string, string> = {
+  backlog: "#64748b",
+  todo: "#3b82f6",
+  in_progress: "#f59e0b",
+  review: "#a855f7",
+  done: "#22c55e",
+};
 
 export function TaskModal({ task, developers, projects = [], defaultStatus = "backlog", githubConfigured, onSave, onClose, sprints = [], selectedSprintId }: Props) {
   const { createSubtask, toggleSubtask, deleteSubtask, updateTask } = useStore();
@@ -60,6 +79,7 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
   );
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [pendingSubtasks, setPendingSubtasks] = useState<string[]>([]);
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(!task);
@@ -132,8 +152,12 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
   };
 
   const handleAddSubtask = () => {
-    if (!newSubtaskTitle.trim() || !task) return;
-    createSubtask(task.id, newSubtaskTitle.trim());
+    if (!newSubtaskTitle.trim()) return;
+    if (task) {
+      createSubtask(task.id, newSubtaskTitle.trim());
+    } else {
+      setPendingSubtasks((prev) => [...prev, newSubtaskTitle.trim()]);
+    }
     setNewSubtaskTitle("");
   };
 
@@ -156,235 +180,307 @@ export function TaskModal({ task, developers, projects = [], defaultStatus = "ba
       startDate: startDate || null,
       endDate: endDate || null,
       ...(isNew && selectedProjectIds.length > 0 ? { branchProjectIds: selectedProjectIds } : {}),
+      ...(isNew && pendingSubtasks.length > 0 ? { subtaskTitles: pendingSubtasks } : {}),
     });
     onClose();
   };
 
-  const statusColors: Record<string, string> = {
-    backlog: "#64748b",
-    todo: "#3b82f6",
-    in_progress: "#f59e0b",
-    review: "#a855f7",
-    done: "#22c55e",
-  };
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className={`modal task-modal ${task ? "task-modal-wide" : ""}`} onClick={(e) => e.stopPropagation()}>
-        {/* Close button */}
-        <button className="task-modal-close" onClick={onClose}><X size={18} /></button>
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className={cn(
+        "border-border/50 bg-card/95 backdrop-blur-xl p-0 gap-0",
+        task ? "sm:max-w-[780px]" : "sm:max-w-[520px]"
+      )}>
+        <DialogTitle className="sr-only">{task ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
+        <div className={task ? "flex gap-0" : ""}>
+          <div className={cn("flex-1 space-y-4 p-5", task && "border-r border-border/30")}>
+            {/* Title */}
+            <div className="flex items-center gap-2 pr-8">
+              {editingTitle ? (
+                <input
+                  ref={titleRef}
+                  className="w-full bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground outline-none"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleTitleBlur(); }}
+                  placeholder="Título da tarefa"
+                />
+              ) : (
+                <>
+                  <Button variant="ghost" size="icon-xs" className="shrink-0" onClick={() => setEditingTitle(true)}>
+                    <Pencil size={14} />
+                  </Button>
+                  <h2 className="flex-1 cursor-pointer text-lg font-semibold" onClick={() => setEditingTitle(true)}>
+                    {title || "Sem título"}
+                  </h2>
+                </>
+              )}
+            </div>
 
-        <div className={task ? "task-modal-split" : ""}>
-        <div className="task-modal-main">
-
-        {/* Title */}
-        <div className="task-modal-title">
-          {editingTitle ? (
-            <input
-              ref={titleRef}
-              className="task-modal-title-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={handleTitleBlur}
-              onKeyDown={(e) => { if (e.key === "Enter") handleTitleBlur(); }}
-              placeholder="Título da tarefa"
+            {/* Description */}
+            <textarea
+              className="w-full resize-none rounded-md border-0 bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground/50 outline-none"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={handleDescriptionBlur}
+              placeholder="Adicionar descrição..."
+              rows={3}
+              onInput={(e) => {
+                const el = e.target as HTMLTextAreaElement;
+                el.style.height = "auto";
+                el.style.height = Math.max(72, el.scrollHeight) + "px";
+              }}
             />
-          ) : (
-            <>
-              <h2 onClick={() => setEditingTitle(true)}>{title || "Sem título"}</h2>
-              <button className="btn-icon-sm" onClick={() => setEditingTitle(true)}><Pencil size={14} /></button>
-            </>
-          )}
-        </div>
 
-        {/* Description */}
-        <textarea
-          className="task-modal-desc"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          onBlur={handleDescriptionBlur}
-          placeholder="Adicionar descrição..."
-          rows={3}
-          onInput={(e) => {
-            const el = e.target as HTMLTextAreaElement;
-            el.style.height = "auto";
-            el.style.height = Math.max(72, el.scrollHeight) + "px";
-          }}
-        />
+            {/* Inline metadata chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <InlineDropdown
+                open={openDropdown === "status"}
+                onToggle={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                trigger={<><span className="inline-block h-2 w-2 rounded-full" style={{ background: statusColors[status] }} />{statusInfo?.label}</>}
+              >
+                {COLUMNS.map((c) => (
+                  <button
+                    key={c.key}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-secondary/50",
+                      status === c.key && "bg-primary/10 text-primary"
+                    )}
+                    onClick={() => handleStatusChange(c.key)}
+                  >
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: statusColors[c.key] }} />{c.label}
+                  </button>
+                ))}
+              </InlineDropdown>
 
-        {/* Inline metadata chips */}
-        <div className="task-modal-meta">
-          <InlineDropdown
-            open={openDropdown === "status"}
-            onToggle={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-            trigger={<><span className="chip-dot" style={{ background: statusColors[status] }} />{statusInfo?.label}</>}
-          >
-            {COLUMNS.map((c) => (
-              <button key={c.key} className={`dropdown-item ${status === c.key ? "active" : ""}`} onClick={() => handleStatusChange(c.key)}>
-                <span className="chip-dot" style={{ background: statusColors[c.key] }} />{c.label}
-              </button>
-            ))}
-          </InlineDropdown>
+              <InlineDropdown
+                open={openDropdown === "priority"}
+                onToggle={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")}
+                trigger={<><span className="inline-block h-2 w-2 rounded-full" style={{ background: priorityInfo?.color }} />{priorityInfo?.label}</>}
+              >
+                {PRIORITIES.map((p) => (
+                  <button
+                    key={p.key}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-secondary/50",
+                      priority === p.key && "bg-primary/10 text-primary"
+                    )}
+                    onClick={() => handlePriorityChange(p.key)}
+                  >
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color }} />{p.label}
+                  </button>
+                ))}
+              </InlineDropdown>
 
-          <InlineDropdown
-            open={openDropdown === "priority"}
-            onToggle={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")}
-            trigger={<><span className="chip-dot" style={{ background: priorityInfo?.color }} />{priorityInfo?.label}</>}
-          >
-            {PRIORITIES.map((p) => (
-              <button key={p.key} className={`dropdown-item ${priority === p.key ? "active" : ""}`} onClick={() => handlePriorityChange(p.key)}>
-                <span className="chip-dot" style={{ background: p.color }} />{p.label}
-              </button>
-            ))}
-          </InlineDropdown>
-
-          <InlineDropdown
-            open={openDropdown === "assignee"}
-            onToggle={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")}
-            trigger={
-              assignee
-                ? <><span className="avatar-xs" style={{ background: assignee.color }}>{assignee.avatar}</span>{assignee.name}</>
-                : <span style={{ color: "var(--text-muted)" }}>Responsável</span>
-            }
-          >
-            <button className={`dropdown-item ${!assigneeId ? "active" : ""}`} onClick={() => handleAssigneeChange("")}>
-              Sem responsável
-            </button>
-            {developers.map((d) => (
-              <button key={d.id} className={`dropdown-item ${assigneeId === d.id ? "active" : ""}`} onClick={() => handleAssigneeChange(d.id)}>
-                <span className="avatar-xs" style={{ background: d.color }}>{d.avatar}</span>{d.name}
-              </button>
-            ))}
-          </InlineDropdown>
-
-          {sprints.length > 0 && (
-            <InlineDropdown
-              open={openDropdown === "sprint"}
-              onToggle={() => setOpenDropdown(openDropdown === "sprint" ? null : "sprint")}
-              trigger={
-                sprintId
-                  ? <><Zap size={13} />{sprints.find((s) => s.id === sprintId)?.name || "Sprint"}</>
-                  : <span style={{ color: "var(--text-muted)" }}><Zap size={13} /> Sprint</span>
-              }
-            >
-              <button className={`dropdown-item ${!sprintId ? "active" : ""}`} onClick={() => handleSprintChange("")}>
-                Sem sprint (Backlog)
-              </button>
-              {sprints.filter((s) => s.status !== "completed").map((s) => (
-                <button key={s.id} className={`dropdown-item ${sprintId === s.id ? "active" : ""}`} onClick={() => handleSprintChange(s.id)}>
-                  <span className="chip-dot" style={{ background: s.status === "active" ? "#22c55e" : "#3b82f6" }} />{s.name}
+              <InlineDropdown
+                open={openDropdown === "assignee"}
+                onToggle={() => setOpenDropdown(openDropdown === "assignee" ? null : "assignee")}
+                trigger={
+                  assignee
+                    ? <>
+                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[0.5rem] font-bold text-white" style={{ background: assignee.color }}>{assignee.avatar}</span>
+                        {assignee.name}
+                      </>
+                    : <span className="text-muted-foreground">Responsável</span>
+                }
+              >
+                <button
+                  className={cn("flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-secondary/50", !assigneeId && "bg-primary/10 text-primary")}
+                  onClick={() => handleAssigneeChange("")}
+                >
+                  Sem responsável
                 </button>
-              ))}
-            </InlineDropdown>
-          )}
+                {developers.map((d) => (
+                  <button
+                    key={d.id}
+                    className={cn("flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-secondary/50", assigneeId === d.id && "bg-primary/10 text-primary")}
+                    onClick={() => handleAssigneeChange(d.id)}
+                  >
+                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[0.5rem] font-bold text-white" style={{ background: d.color }}>{d.avatar}</span>
+                    {d.name}
+                  </button>
+                ))}
+              </InlineDropdown>
 
-          <div className="inline-chip date-chip">
-            <Calendar size={13} />
-            <input type="date" value={startDate} onChange={(e) => handleDateChange("startDate", e.target.value)} />
-            <span>→</span>
-            <input type="date" value={endDate} onChange={(e) => handleDateChange("endDate", e.target.value)} min={startDate || undefined} />
-          </div>
-        </div>
+              {sprints.length > 0 && (
+                <InlineDropdown
+                  open={openDropdown === "sprint"}
+                  onToggle={() => setOpenDropdown(openDropdown === "sprint" ? null : "sprint")}
+                  trigger={
+                    sprintId
+                      ? <><Zap size={13} />{sprints.find((s) => s.id === sprintId)?.name || "Sprint"}</>
+                      : <span className="text-muted-foreground"><Zap size={13} /> Sprint</span>
+                  }
+                >
+                  <button
+                    className={cn("flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-secondary/50", !sprintId && "bg-primary/10 text-primary")}
+                    onClick={() => handleSprintChange("")}
+                  >
+                    Sem sprint (Backlog)
+                  </button>
+                  {sprints.filter((s) => s.status !== "completed").map((s) => (
+                    <button
+                      key={s.id}
+                      className={cn("flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-secondary/50", sprintId === s.id && "bg-primary/10 text-primary")}
+                      onClick={() => handleSprintChange(s.id)}
+                    >
+                      <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.status === "active" ? "#22c55e" : "#3b82f6" }} />{s.name}
+                    </button>
+                  ))}
+                </InlineDropdown>
+              )}
 
-        {/* Branches (edit mode) */}
-        {task && task.branches && task.branches.length > 0 && (
-          <div className="task-modal-section">
-            <div className="task-modal-section-title"><GitBranch size={14} /> Branches</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {task.branches.map((b) => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#a78bfa" }}>
-                  <GitBranch size={12} />
-                  <span style={{ color: "var(--text-secondary)" }}>{b.projectName}:</span>
-                  <code>{b.branchName}</code>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Branch creation (new task mode) */}
-        {isNew && showBranchSection && (
-          <div className="task-modal-section">
-            <div className="task-modal-section-title"><GitBranch size={14} /> Criar branch nos projetos</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {projects.map((project) => (
-                <label key={project.id} className="subtask-item" style={{ cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedProjectIds.includes(project.id)}
-                    onChange={() => toggleProject(project.id)}
-                    style={{ width: "auto" }}
-                  />
-                  <span style={{ fontWeight: 500 }}>{project.name}</span>
-                  <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                    {project.githubOwner}/{project.githubRepo}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Subtasks */}
-        <div className="task-modal-section">
-          <div className="task-modal-section-title">
-            <CheckSquare size={14} /> Subtarefas
-            {subtasks.length > 0 && <span className="subtask-counter">{doneCount}/{subtasks.length}</span>}
-          </div>
-
-          {subtasks.length > 0 && (
-            <div className="subtask-progress-bar" style={{ marginBottom: 8 }}>
-              <div className="subtask-progress-fill" style={{ width: `${(doneCount / subtasks.length) * 100}%` }} />
-            </div>
-          )}
-
-          <div className="subtask-list">
-            {subtasks.map((s) => (
-              <div key={s.id} className={`subtask-item ${s.done ? "subtask-done" : ""}`}>
-                <button type="button" className="subtask-check" onClick={() => toggleSubtask(s.id)}>
-                  {s.done ? <CheckSquare size={16} /> : <Square size={16} />}
-                </button>
-                <span className="subtask-title">{s.title}</span>
-                <button type="button" className="subtask-delete" onClick={() => deleteSubtask(s.id)}>
-                  <Trash2 size={13} />
-                </button>
+              <div className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-secondary/30 px-2.5 py-1 text-xs">
+                <Calendar size={13} className="text-muted-foreground" />
+                <input
+                  type="date"
+                  className="bg-transparent text-xs text-foreground outline-none [color-scheme:dark]"
+                  value={startDate}
+                  onChange={(e) => handleDateChange("startDate", e.target.value)}
+                />
+                <span className="text-muted-foreground">→</span>
+                <input
+                  type="date"
+                  className="bg-transparent text-xs text-foreground outline-none [color-scheme:dark]"
+                  value={endDate}
+                  onChange={(e) => handleDateChange("endDate", e.target.value)}
+                  min={startDate || undefined}
+                />
               </div>
-            ))}
-          </div>
-
-          {task ? (
-            <div className="subtask-add">
-              <Plus size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-              <input
-                type="text"
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                onKeyDown={handleSubtaskKeyDown}
-                placeholder="Adicionar subtarefa"
-              />
             </div>
-          ) : null}
+
+            {/* Branches (edit mode) */}
+            {task && task.branches && task.branches.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <GitBranch size={14} /> Branches
+                </div>
+                <div className="space-y-1">
+                  {task.branches.map((b) => (
+                    <div key={b.id} className="flex items-center gap-1.5 text-xs">
+                      <GitBranch size={12} className="text-purple-400" />
+                      <span className="text-muted-foreground">{b.projectName}:</span>
+                      <code className="text-purple-400">{b.branchName}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Branch creation (new task mode) */}
+            {isNew && showBranchSection && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <GitBranch size={14} /> Criar branch nos projetos
+                </div>
+                <div className="space-y-1">
+                  {projects.map((project) => (
+                    <label key={project.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-secondary/30">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjectIds.includes(project.id)}
+                        onChange={() => toggleProject(project.id)}
+                        className="rounded border-border"
+                      />
+                      <span className="font-medium text-xs">{project.name}</span>
+                      <span className="text-[0.65rem] text-muted-foreground">
+                        {project.githubOwner}/{project.githubRepo}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Subtasks */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <CheckSquare size={14} /> Subtarefas
+                {(subtasks.length > 0 || pendingSubtasks.length > 0) && (
+                  <Badge variant="secondary" className="ml-1 text-[0.6rem] px-1.5 py-0">
+                    {task ? `${doneCount}/${subtasks.length}` : pendingSubtasks.length}
+                  </Badge>
+                )}
+              </div>
+
+              {subtasks.length > 0 && (
+                <Progress value={(doneCount / subtasks.length) * 100} className="h-1.5" />
+              )}
+
+              <div className="space-y-1">
+                {/* Existing subtasks (edit mode) */}
+                {subtasks.map((s) => (
+                  <div key={s.id} className={cn("group/sub flex items-center gap-2 rounded-md px-1 py-1 text-sm", s.done && "opacity-50")}>
+                    <button type="button" className="text-muted-foreground hover:text-primary transition-colors" onClick={() => toggleSubtask(s.id)}>
+                      {s.done ? <CheckSquare size={16} /> : <Square size={16} />}
+                    </button>
+                    <span className={cn("flex-1 text-xs", s.done && "line-through")}>{s.title}</span>
+                    <button
+                      type="button"
+                      className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/sub:opacity-100"
+                      onClick={() => deleteSubtask(s.id)}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+                {/* Pending subtasks (create mode) */}
+                {pendingSubtasks.map((title, i) => (
+                  <div key={i} className="group/sub flex items-center gap-2 rounded-md px-1 py-1 text-sm">
+                    <Square size={16} className="text-muted-foreground" />
+                    <span className="flex-1 text-xs">{title}</span>
+                    <button
+                      type="button"
+                      className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/sub:opacity-100"
+                      onClick={() => setPendingSubtasks((prev) => prev.filter((_, idx) => idx !== i))}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 rounded-md border border-dashed border-border/50 px-2 py-1.5">
+                <Plus size={14} className="shrink-0 text-muted-foreground" />
+                <input
+                  type="text"
+                  className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={handleSubtaskKeyDown}
+                  placeholder="Adicionar subtarefa"
+                />
+              </div>
+            </div>
+
+            {/* Create button (new task only) */}
+            {isNew && (
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+                <Button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCreate();
+                  }}
+                >
+                  Criar
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Comments sidebar */}
+          {task && (
+            <div className="w-[280px] shrink-0 p-4">
+              <Comments taskId={task.id} />
+            </div>
+          )}
         </div>
-
-        {/* Create button (new task only) */}
-        {isNew && (
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="button" className="btn btn-primary" onClick={handleCreate}>Criar</button>
-          </div>
-        )}
-
-        </div>{/* end task-modal-main */}
-
-        {/* Comments sidebar */}
-        {task && (
-          <div className="task-modal-comments">
-            <Comments taskId={task.id} />
-          </div>
-        )}
-
-        </div>{/* end task-modal-split */}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

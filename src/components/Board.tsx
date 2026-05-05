@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { Developer, Task, TaskStatus, Project, Sprint } from "../types";
 import { COLUMNS } from "../types";
 import { TaskCard } from "./TaskCard";
@@ -10,7 +13,7 @@ import { TaskModal } from "./TaskModal";
 interface Props {
   tasks: Task[];
   developers: Developer[];
-  onCreateTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[] }) => void;
+  onCreateTask: (data: Omit<Task, "id" | "createdAt" | "updatedAt" | "branches" | "subtasks"> & { branchProjectIds?: string[]; subtaskTitles?: string[] }) => void;
   onUpdateTask: (id: string, data: Partial<Task>) => void;
   onMoveTask: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
@@ -36,21 +39,27 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="board">
+        <div className="flex gap-4 pb-2" style={{ minWidth: 'max-content' }}>
           {COLUMNS.map((col) => {
             const columnTasks = getColumnTasks(col.key);
             return (
-              <div className="column" key={col.key}>
-                <div className="column-header">
-                  <h3>{col.label} <span className="count">{columnTasks.length}</span></h3>
-                  <button className="btn-icon" onClick={() => setShowCreate(col.key)}>
-                    <Plus size={18} />
-                  </button>
+              <div className="flex w-[280px] min-w-[280px] flex-col rounded-lg border border-border/30 bg-card" key={col.key}>
+                <div className="flex items-center justify-between px-3 py-2.5">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    {col.label}
+                    <Badge variant="secondary" className="text-[0.6rem] px-1.5 py-0">{columnTasks.length}</Badge>
+                  </h3>
+                  <Button variant="ghost" size="icon-xs" onClick={() => setShowCreate(col.key)}>
+                    <Plus size={16} />
+                  </Button>
                 </div>
                 <Droppable droppableId={col.key}>
                   {(provided, snapshot) => (
                     <div
-                      className={`column-body ${snapshot.isDraggingOver ? "drag-over" : ""}`}
+                      className={cn(
+                        "flex-1 space-y-2 px-2 pb-2 transition-colors",
+                        snapshot.isDraggingOver && "bg-primary/5 glow-sm rounded-b-lg"
+                      )}
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                     >
@@ -63,7 +72,7 @@ export function Board({ tasks, developers, onCreateTask, onUpdateTask, onMoveTas
                               {...provided.dragHandleProps}
                               style={{
                                 ...provided.draggableProps.style,
-                                ...(snapshot.isDragging ? { opacity: 0.9 } : {}),
+                                ...(snapshot.isDragging ? { opacity: 0.9, zIndex: 9999 } : {}),
                               }}
                             >
                               <TaskCard

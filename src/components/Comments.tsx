@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Trash2, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getSocket } from "../socket";
 import { useAuth } from "../contexts/AuthContext";
 import type { Comment } from "../types";
@@ -19,7 +21,6 @@ export function Comments({ taskId }: Props) {
     if (!token) return;
     const socket = getSocket(token);
 
-    // Request comments
     socket.emit("comment:list", taskId);
 
     const handleListed = (data: { taskId: string; comments: Comment[] }) => {
@@ -87,34 +88,43 @@ export function Comments({ taskId }: Props) {
   };
 
   return (
-    <div className="comments">
-      <div className="comments-header">
+    <div className="flex min-h-[300px] flex-col">
+      <div className="flex items-center gap-2 pb-3 text-sm font-medium text-muted-foreground">
         <MessageSquare size={15} />
         <span>Comentários ({comments.length})</span>
       </div>
 
-      <div className="comments-list">
+      <div className="flex-1 overflow-y-auto max-h-[360px] space-y-3 pr-1">
         {loading ? (
-          <p className="comments-empty">Carregando...</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">Carregando...</p>
         ) : comments.length === 0 ? (
-          <p className="comments-empty">Nenhum comentário</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">Nenhum comentário</p>
         ) : (
           comments.map((comment) => (
-            <div className="comment" key={comment.id}>
-              <span className="comment-avatar" style={{ backgroundColor: comment.authorColor }}>
+            <div className="flex gap-2.5" key={comment.id}>
+              <span
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
+                style={{ backgroundColor: comment.authorColor }}
+              >
                 {comment.authorAvatar}
               </span>
-              <div className="comment-body">
-                <div className="comment-meta">
-                  <span className="comment-author">{comment.authorName}</span>
-                  <span className="comment-time">{formatTime(comment.createdAt)}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-foreground">{comment.authorName}</span>
+                  <span className="text-[0.65rem] text-muted-foreground">{formatTime(comment.createdAt)}</span>
                   {(comment.authorId === user?.id || user?.role === "admin") && (
-                    <button className="comment-delete" onClick={() => handleDelete(comment.id)}>
+                    <button
+                      className="ml-auto opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                      onClick={() => handleDelete(comment.id)}
+                      style={{ opacity: undefined }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
+                    >
                       <Trash2 size={11} />
                     </button>
                   )}
                 </div>
-                <p className="comment-text">{comment.content}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed break-words">{comment.content}</p>
               </div>
             </div>
           ))
@@ -122,15 +132,16 @@ export function Comments({ taskId }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      <form className="comment-form" onSubmit={handleSubmit}>
-        <input
+      <form className="mt-auto flex items-center gap-2 border-t border-border pt-3" onSubmit={handleSubmit}>
+        <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Escreva um comentário..."
+          className="h-8 text-xs bg-secondary/30"
         />
-        <button type="submit" className="comment-send" disabled={!text.trim()}>
-          <Send size={15} />
-        </button>
+        <Button type="submit" size="icon-xs" disabled={!text.trim()} className="shrink-0">
+          <Send size={14} />
+        </Button>
       </form>
     </div>
   );

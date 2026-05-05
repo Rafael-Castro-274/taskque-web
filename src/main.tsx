@@ -8,15 +8,14 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
 import App from './App'
 import './index.css'
-import './App.css'
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="loading-screen">
-        <div className="loading-spinner" />
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent glow-sm" />
       </div>
     );
   }

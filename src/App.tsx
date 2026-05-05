@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "./contexts/AuthContext";
 import { useStore } from "./contexts/StoreContext";
-import { useTheme } from "./hooks/useTheme";
 import { Board } from "./components/Board";
 import { ListView } from "./components/ListView";
 import { TvPanel } from "./components/TvPanel";
 import { Sidebar } from "./components/Sidebar";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { Wifi, WifiOff, Search, X, Zap } from "lucide-react";
 import { disconnectSocket, API_URL as SOCKET_API_URL } from "./socket";
 
@@ -22,7 +24,6 @@ const VIEW_LABELS: Record<ViewMode, string> = {
 function App() {
   const [view, setView] = useState<ViewMode>("board");
   const [searchQuery, setSearchQuery] = useState("");
-  const { theme, toggleTheme } = useTheme();
   const { user, token, logout } = useAuth();
   const {
     developers,
@@ -101,7 +102,6 @@ function App() {
     );
   }, [sprintFilteredTasks, searchQuery]);
 
-  const activeSprint = useMemo(() => sprints.find((s) => s.status === "active"), [sprints]);
   const sortedSprints = useMemo(() => {
     const order = { active: 0, planning: 1, completed: 2 };
     return [...sprints].sort((a, b) => order[a.status] - order[b.status]);
@@ -111,17 +111,15 @@ function App() {
 
   if (view === "tv") {
     return (
-      <div className="app">
-        <div className="layout">
+      <div className="flex h-screen flex-col">
+        <div className="flex flex-1 overflow-hidden">
           <Sidebar
             currentUser={user}
             developers={developers}
             projects={projects}
             githubConfigured={githubConfigured}
             view={view}
-            theme={theme}
             onViewChange={setView}
-            onToggleTheme={toggleTheme}
             onCreateDev={createDeveloper}
             onUpdateDev={updateDeveloper}
             onDeleteDev={deleteDeveloper}
@@ -139,7 +137,7 @@ function App() {
             onDeleteSprint={deleteSprint}
             onCompleteSprint={completeSprint}
           />
-          <div className="content tv-content">
+          <div className="flex-1 overflow-y-auto">
             <TvPanel tasks={tasks} developers={developers} />
           </div>
         </div>
@@ -148,17 +146,15 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <div className="layout">
+    <div className="flex h-screen flex-col">
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar
           currentUser={user}
           developers={developers}
           projects={projects}
           githubConfigured={githubConfigured}
           view={view}
-          theme={theme}
           onViewChange={setView}
-          onToggleTheme={toggleTheme}
           onCreateDev={createDeveloper}
           onUpdateDev={updateDeveloper}
           onDeleteDev={deleteDeveloper}
@@ -176,15 +172,21 @@ function App() {
           onDeleteSprint={deleteSprint}
           onCompleteSprint={completeSprint}
         />
-        <div className="content">
-          <header className="header">
-            <div className="header-left">
-              <h2 className="page-title">{VIEW_LABELS[view]}</h2>
-              <span className="task-count">{filteredTasks.length} tarefas</span>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header */}
+          <header className="flex items-center justify-between gap-4 border-b border-border/30 bg-background/80 px-5 py-3 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-semibold">{VIEW_LABELS[view]}</h2>
+              <Badge variant="secondary" className="text-[0.6rem] px-1.5 py-0">
+                {filteredTasks.length} tarefas
+              </Badge>
             </div>
-            <div className="sprint-selector">
-              <Zap size={14} className="sprint-selector-icon" />
+
+            {/* Sprint selector */}
+            <div className="flex items-center gap-1.5 rounded-md border border-border/40 bg-secondary/20 px-2.5 py-1">
+              <Zap size={13} className="text-primary" />
               <select
+                className="bg-transparent text-xs text-foreground outline-none"
                 value={selectedSprintId || ""}
                 onChange={(e) => setSelectedSprintId(e.target.value || null)}
               >
@@ -198,27 +200,42 @@ function App() {
                 ))}
               </select>
             </div>
-            <div className="header-search">
-              <Search size={14} className="header-search-icon" />
-              <input
-                className="header-search-input"
+
+            {/* Search */}
+            <div className="relative flex-shrink flex-grow-0 basis-[340px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-8 pl-8 pr-8 text-xs bg-secondary/20 border-border/30"
                 type="text"
                 placeholder="Buscar por título, descrição ou branch..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button className="header-search-clear" onClick={() => setSearchQuery("")}>
+                <button
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setSearchQuery("")}
+                >
                   <X size={14} />
                 </button>
               )}
             </div>
-            <div className={`connection-status ${connected ? "online" : "offline"}`}>
-              {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
+
+            {/* Connection status */}
+            <Badge
+              variant={connected ? "outline" : "destructive"}
+              className={cn(
+                "gap-1.5 text-[0.6rem]",
+                connected && "border-primary/30 text-primary glow-sm"
+              )}
+            >
+              {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
               {connected ? "Conectado" : "Desconectado"}
-            </div>
+            </Badge>
           </header>
-          <main className="main">
+
+          {/* Main content */}
+          <main className="flex-1 overflow-auto p-4">
             {view === "board" ? (
               <Board
                 tasks={filteredTasks}

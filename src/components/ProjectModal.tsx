@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { Project } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { API_URL } from "../socket";
@@ -34,7 +38,6 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
 
   const isEditing = !!project;
 
-  // Fetch repos on mount (new project only)
   useEffect(() => {
     if (isEditing) return;
     setLoadingRepos(true);
@@ -50,7 +53,6 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
       .finally(() => setLoadingRepos(false));
   }, [token, isEditing]);
 
-  // Fetch branches when repo changes
   useEffect(() => {
     if (!githubOwner || !githubRepo) {
       setBranches([]);
@@ -99,28 +101,27 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
   const selectedFullName = githubOwner && githubRepo ? `${githubOwner}/${githubRepo}` : "";
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{isEditing ? "Editar Projeto" : "Novo Projeto"}</h2>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
-        </div>
-        <form onSubmit={handleSubmit}>
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[480px] border-border/50 bg-card/95 backdrop-blur-xl">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Editar Projeto" : "Novo Projeto"}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
           {!isEditing && (
-            <div className="form-group">
-              <label>Repositório GitHub</label>
+            <div className="space-y-2">
+              <Label>Repositório GitHub</Label>
               {loadingRepos ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", color: "var(--text-secondary)" }}>
-                  <Loader2 size={16} className="spin" />
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 size={16} className="animate-spin" />
                   <span>Carregando repositórios...</span>
                 </div>
               ) : repoError ? (
-                <div style={{ color: "var(--danger)", fontSize: 13 }}>{repoError}</div>
+                <div className="text-sm text-destructive">{repoError}</div>
               ) : (
                 <select
                   value={selectedFullName}
                   onChange={(e) => handleRepoSelect(e.target.value)}
-                  style={{ width: "100%" }}
+                  className="flex h-9 w-full rounded-md border border-input bg-secondary/30 px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Selecione um repositório</option>
                   {repos.map((r) => (
@@ -133,9 +134,9 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
             </div>
           )}
 
-          <div className="form-group">
-            <label>Nome do Projeto</label>
-            <input
+          <div className="space-y-2">
+            <Label>Nome do Projeto</Label>
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Frontend, Backend, API..."
@@ -143,27 +144,26 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
             />
           </div>
 
-          {/* Branch select - shown when repo is selected (new) or always (edit) */}
           {(selectedFullName || isEditing) && (
-            <div className="form-group">
-              <label>Branch Base</label>
+            <div className="space-y-2">
+              <Label>Branch Base</Label>
               {loadingBranches ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", color: "var(--text-secondary)" }}>
-                  <Loader2 size={16} className="spin" />
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 size={16} className="animate-spin" />
                   <span>Carregando branches...</span>
                 </div>
               ) : branches.length > 0 ? (
                 <select
                   value={defaultBranch}
                   onChange={(e) => setDefaultBranch(e.target.value)}
-                  style={{ width: "100%" }}
+                  className="flex h-9 w-full rounded-md border border-input bg-secondary/30 px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {branches.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
               ) : (
-                <input
+                <Input
                   value={defaultBranch}
                   onChange={(e) => setDefaultBranch(e.target.value)}
                   placeholder="main"
@@ -173,18 +173,18 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
           )}
 
           {isEditing && (
-            <div className="form-row">
-              <div className="form-group">
-                <label>GitHub Owner</label>
-                <input
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>GitHub Owner</Label>
+                <Input
                   value={githubOwner}
                   onChange={(e) => setGithubOwner(e.target.value)}
                   placeholder="usuário ou organização"
                 />
               </div>
-              <div className="form-group">
-                <label>GitHub Repo</label>
-                <input
+              <div className="space-y-2">
+                <Label>GitHub Repo</Label>
+                <Input
                   value={githubRepo}
                   onChange={(e) => setGithubRepo(e.target.value)}
                   placeholder="nome do repositório"
@@ -193,12 +193,12 @@ export function ProjectModal({ project, onSave, onClose }: Props) {
             </div>
           )}
 
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-primary">Salvar</button>
-          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit">Salvar</Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

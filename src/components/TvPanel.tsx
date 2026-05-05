@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Clock, Calendar, Activity, User, AlertTriangle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { Developer, Task } from "../types";
 import { PRIORITIES } from "../types";
 
@@ -24,15 +27,19 @@ function TimeDisplay() {
   }, []);
 
   return (
-    <div className="tv-clock">
-      <Clock size={18} />
-      <span className="tv-time">
-        {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-      </span>
-      <span className="tv-date-text">
-        {now.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
-      </span>
-    </div>
+    <Card className="border-border/30 bg-card/40 backdrop-blur-sm">
+      <CardContent className="flex flex-col items-end gap-0.5 p-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Clock size={16} />
+        </div>
+        <span className="text-2xl font-bold tabular-nums text-foreground glow-text">
+          {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        </span>
+        <span className="text-xs text-muted-foreground capitalize">
+          {now.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+        </span>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -55,95 +62,104 @@ export function TvPanel({ tasks, developers }: Props) {
   const getPriority = (key: string) => PRIORITIES.find((p) => p.key === key);
 
   return (
-    <div className="tv-panel">
-      <div className="tv-header">
-        <div className="tv-header-left">
-          <h1 className="tv-title">
+    <div className="flex flex-col gap-6 p-8 lg:p-10">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-4">
+          <h1 className="flex items-center gap-3 text-2xl font-bold text-primary glow-text">
             <Activity size={28} />
             Painel de Atividades
           </h1>
-          <div className="tv-stats">
-            <div className="tv-stat">
-              <span className="tv-stat-value">{inProgress.length}</span>
-              <span className="tv-stat-label">Em progresso</span>
-            </div>
-            <div className="tv-stat">
-              <span className="tv-stat-value">{inReview.length}</span>
-              <span className="tv-stat-label">Em revisão</span>
-            </div>
-            <div className="tv-stat">
-              <span className="tv-stat-value">{doneTasks.length}</span>
-              <span className="tv-stat-label">Concluídas</span>
-            </div>
+          <div className="flex gap-3">
+            {[
+              { value: inProgress.length, label: "Em progresso" },
+              { value: inReview.length, label: "Em revisão" },
+              { value: doneTasks.length, label: "Concluídas" },
+            ].map((stat) => (
+              <Card key={stat.label} className="border-border/30 bg-card/40 backdrop-blur-sm">
+                <CardContent className="flex flex-col items-center px-5 py-2.5">
+                  <span className="text-2xl font-bold text-foreground">{stat.value}</span>
+                  <span className="text-[0.65rem] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
         <TimeDisplay />
       </div>
 
-      <div className="tv-body">
-        {totalActive === 0 ? (
-          <div className="tv-empty">
-            <Activity size={48} />
-            <h2>Nenhuma tarefa em andamento</h2>
-            <p>As tarefas em progresso e revisão aparecerão aqui</p>
-          </div>
-        ) : (
-          <>
-            {inProgress.length > 0 && (
-              <div className="tv-section">
-                <h2 className="tv-section-title">
-                  <span className="tv-section-dot tv-dot-progress" />
-                  Em Progresso
-                </h2>
-                <div className="tv-grid">
-                  {inProgress.map((task) => {
-                    const dev = getDev(task.assigneeId);
-                    const priority = getPriority(task.priority);
-                    const daysLeft = getDaysRemaining(task.endDate);
-                    const isOverdue = daysLeft !== null && daysLeft < 0;
-                    const isUrgent = daysLeft !== null && daysLeft <= 1 && daysLeft >= 0;
+      {/* Body */}
+      {totalActive === 0 ? (
+        <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 text-muted-foreground">
+          <Activity size={48} className="opacity-30" />
+          <h2 className="text-lg font-semibold">Nenhuma tarefa em andamento</h2>
+          <p className="text-sm">As tarefas em progresso e revisão aparecerão aqui</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {inProgress.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-warning animate-glow-pulse" />
+                Em Progresso
+              </h2>
+              <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4">
+                {inProgress.map((task) => {
+                  const dev = getDev(task.assigneeId);
+                  const priority = getPriority(task.priority);
+                  const daysLeft = getDaysRemaining(task.endDate);
+                  const isOverdue = daysLeft !== null && daysLeft < 0;
+                  const isUrgent = daysLeft !== null && daysLeft <= 1 && daysLeft >= 0;
 
-                    return (
-                      <div
-                        key={task.id}
-                        className={`tv-card ${isOverdue ? "tv-card-overdue" : ""} ${isUrgent ? "tv-card-urgent" : ""}`}
-                      >
-                        <div className="tv-card-top">
-                          <span className="priority-badge" style={{ backgroundColor: priority?.color }}>
+                  return (
+                    <Card
+                      key={task.id}
+                      className={cn(
+                        "border-border/30 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:glow-md",
+                        isOverdue && "border-destructive/40",
+                        isUrgent && "border-warning/40"
+                      )}
+                    >
+                      <CardContent className="flex flex-col gap-3 p-4">
+                        <div className="flex items-center gap-2">
+                          <Badge className="border-0 text-[0.6rem] font-semibold uppercase" style={{ backgroundColor: priority?.color, color: "#fff" }}>
                             {priority?.label}
-                          </span>
+                          </Badge>
                           {isOverdue && (
-                            <span className="tv-overdue-badge">
-                              <AlertTriangle size={12} /> Atrasada
-                            </span>
+                            <Badge variant="destructive" className="gap-1 text-[0.6rem]">
+                              <AlertTriangle size={10} /> Atrasada
+                            </Badge>
                           )}
                           {isUrgent && !isOverdue && (
-                            <span className="tv-urgent-badge">
-                              <Clock size={12} /> Vence {daysLeft === 0 ? "hoje" : "amanhã"}
-                            </span>
+                            <Badge className="gap-1 border-0 bg-warning/20 text-warning text-[0.6rem]">
+                              <Clock size={10} /> Vence {daysLeft === 0 ? "hoje" : "amanhã"}
+                            </Badge>
                           )}
                         </div>
-                        <h3 className="tv-card-title">{task.title}</h3>
+                        <h3 className="text-base font-semibold leading-tight">{task.title}</h3>
                         {task.description && (
-                          <p className="tv-card-desc">{task.description}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{task.description}</p>
                         )}
-                        <div className="tv-card-footer">
+                        <div className="mt-auto flex items-center justify-between pt-1">
                           {dev ? (
-                            <div className="tv-card-dev">
-                              <span className="tv-avatar" style={{ backgroundColor: dev.color }}>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
+                                style={{ backgroundColor: dev.color }}
+                              >
                                 {dev.avatar}
                               </span>
-                              <span>{dev.name}</span>
+                              <span className="text-xs text-muted-foreground">{dev.name}</span>
                             </div>
                           ) : (
-                            <div className="tv-card-dev tv-unassigned">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
                               <User size={14} />
                               <span>Não atribuída</span>
                             </div>
                           )}
                           {(task.startDate || task.endDate) && (
-                            <div className="tv-card-dates">
-                              <Calendar size={13} />
+                            <div className="flex items-center gap-1 text-[0.65rem] text-muted-foreground">
+                              <Calendar size={12} />
                               <span>
                                 {task.startDate ? formatDate(task.startDate) : "—"}
                                 {" → "}
@@ -152,59 +168,65 @@ export function TvPanel({ tasks, developers }: Props) {
                             </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-            )}
+            </section>
+          )}
 
-            {inReview.length > 0 && (
-              <div className="tv-section">
-                <h2 className="tv-section-title">
-                  <span className="tv-section-dot tv-dot-review" />
-                  Em Revisão
-                </h2>
-                <div className="tv-grid">
-                  {inReview.map((task) => {
-                    const dev = getDev(task.assigneeId);
-                    const priority = getPriority(task.priority);
+          {inReview.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+                Em Revisão
+              </h2>
+              <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4">
+                {inReview.map((task) => {
+                  const dev = getDev(task.assigneeId);
+                  const priority = getPriority(task.priority);
 
-                    return (
-                      <div key={task.id} className="tv-card tv-card-review">
-                        <div className="tv-card-top">
-                          <span className="priority-badge" style={{ backgroundColor: priority?.color }}>
-                            {priority?.label}
-                          </span>
-                        </div>
-                        <h3 className="tv-card-title">{task.title}</h3>
+                  return (
+                    <Card
+                      key={task.id}
+                      className="border-border/30 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:glow-md"
+                    >
+                      <CardContent className="flex flex-col gap-3 p-4">
+                        <Badge className="w-fit border-0 text-[0.6rem] font-semibold uppercase" style={{ backgroundColor: priority?.color, color: "#fff" }}>
+                          {priority?.label}
+                        </Badge>
+                        <h3 className="text-base font-semibold leading-tight">{task.title}</h3>
                         {task.description && (
-                          <p className="tv-card-desc">{task.description}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{task.description}</p>
                         )}
-                        <div className="tv-card-footer">
+                        <div className="mt-auto flex items-center pt-1">
                           {dev ? (
-                            <div className="tv-card-dev">
-                              <span className="tv-avatar" style={{ backgroundColor: dev.color }}>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
+                                style={{ backgroundColor: dev.color }}
+                              >
                                 {dev.avatar}
                               </span>
-                              <span>{dev.name}</span>
+                              <span className="text-xs text-muted-foreground">{dev.name}</span>
                             </div>
                           ) : (
-                            <div className="tv-card-dev tv-unassigned">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
                               <User size={14} />
                               <span>Não atribuída</span>
                             </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </section>
+          )}
+        </div>
+      )}
     </div>
   );
 }
