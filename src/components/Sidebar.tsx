@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Monitor,
+  BarChart3,
   LogOut,
   UserCircle,
   UserCheck,
@@ -30,7 +31,7 @@ import { ProjectModal } from "./ProjectModal";
 import { SprintModal } from "./SprintModal";
 import { SprintCompleteModal } from "./SprintCompleteModal";
 
-type ViewMode = "board" | "list" | "tv";
+type ViewMode = "board" | "list" | "tv" | "report";
 
 interface Props {
   currentUser: User;
@@ -136,6 +137,7 @@ export function Sidebar({
               { key: "board" as const, icon: LayoutGrid, label: "Board" },
               { key: "list" as const, icon: List, label: "Lista" },
               { key: "tv" as const, icon: Monitor, label: "Painel TV" },
+              { key: "report" as const, icon: BarChart3, label: "Relatórios" },
             ]).map(({ key, icon: Icon, label }) => (
               <button
                 key={key}

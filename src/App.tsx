@@ -4,6 +4,7 @@ import { useStore } from "./contexts/StoreContext";
 import { Board } from "./components/Board";
 import { ListView } from "./components/ListView";
 import { TvPanel } from "./components/TvPanel";
+import { SprintReport } from "./components/SprintReport";
 import { Sidebar } from "./components/Sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -13,11 +14,12 @@ import { disconnectSocket, API_URL as SOCKET_API_URL } from "./socket";
 
 const API_URL = SOCKET_API_URL;
 
-type ViewMode = "board" | "list" | "tv";
+type ViewMode = "board" | "list" | "tv" | "report";
 
 const VIEW_LABELS: Record<ViewMode, string> = {
   board: "Board",
   list: "Lista",
+  report: "Relatórios",
   tv: "Painel TV",
 };
 
@@ -109,34 +111,49 @@ function App() {
 
   if (!user) return null;
 
+  const sidebarProps = {
+    currentUser: user,
+    developers,
+    projects,
+    githubConfigured,
+    view,
+    onViewChange: setView,
+    onCreateDev: createDeveloper,
+    onUpdateDev: updateDeveloper,
+    onDeleteDev: deleteDeveloper,
+    onToggleActive: toggleActive,
+    onCreateProject: handleCreateProject,
+    onUpdateProject: handleUpdateProject,
+    onDeleteProject: handleDeleteProject,
+    onLogout: handleLogout,
+    sprints,
+    tasks,
+    selectedSprintId,
+    onSelectSprint: setSelectedSprintId,
+    onCreateSprint: createSprint,
+    onUpdateSprint: updateSprint,
+    onDeleteSprint: deleteSprint,
+    onCompleteSprint: completeSprint,
+  };
+
+  if (view === "report") {
+    return (
+      <div className="flex h-screen flex-col">
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar {...sidebarProps} />
+          <div className="flex-1 overflow-y-auto">
+            <SprintReport sprints={sprints} tasks={tasks} developers={developers} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (view === "tv") {
     return (
       <div className="flex h-screen flex-col">
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar
-            currentUser={user}
-            developers={developers}
-            projects={projects}
-            githubConfigured={githubConfigured}
-            view={view}
-            onViewChange={setView}
-            onCreateDev={createDeveloper}
-            onUpdateDev={updateDeveloper}
-            onDeleteDev={deleteDeveloper}
-            onToggleActive={toggleActive}
-            onCreateProject={handleCreateProject}
-            onUpdateProject={handleUpdateProject}
-            onDeleteProject={handleDeleteProject}
-            onLogout={handleLogout}
-            sprints={sprints}
-            tasks={tasks}
-            selectedSprintId={selectedSprintId}
-            onSelectSprint={setSelectedSprintId}
-            onCreateSprint={createSprint}
-            onUpdateSprint={updateSprint}
-            onDeleteSprint={deleteSprint}
-            onCompleteSprint={completeSprint}
-          />
+          <Sidebar {...sidebarProps} />
           <div className="flex-1 overflow-y-auto">
             <TvPanel tasks={tasks} developers={developers} />
           </div>
@@ -148,30 +165,7 @@ function App() {
   return (
     <div className="flex h-screen flex-col">
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          currentUser={user}
-          developers={developers}
-          projects={projects}
-          githubConfigured={githubConfigured}
-          view={view}
-          onViewChange={setView}
-          onCreateDev={createDeveloper}
-          onUpdateDev={updateDeveloper}
-          onDeleteDev={deleteDeveloper}
-          onToggleActive={toggleActive}
-          onCreateProject={handleCreateProject}
-          onUpdateProject={handleUpdateProject}
-          onDeleteProject={handleDeleteProject}
-          onLogout={handleLogout}
-          sprints={sprints}
-          tasks={tasks}
-          selectedSprintId={selectedSprintId}
-          onSelectSprint={setSelectedSprintId}
-          onCreateSprint={createSprint}
-          onUpdateSprint={updateSprint}
-          onDeleteSprint={deleteSprint}
-          onCompleteSprint={completeSprint}
-        />
+        <Sidebar {...sidebarProps} />
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
           <header className="flex items-center justify-between gap-4 border-b border-border/30 bg-card/50 px-5 py-3">
